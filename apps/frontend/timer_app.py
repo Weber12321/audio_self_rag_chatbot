@@ -1,11 +1,15 @@
 import streamlit as st
 import time
-import datetime
-import google.generativeai as genai
-import os
+from google import genai
+from google.genai import types
+import google.generativeai as generateai
+
+api_key = "AIzaSyCle6jmFfSjUcUr-D15ieqd-ZOFeKAdOWc"
 
 # --- Constants ---
-GEMINI_MODEL = "gemini-1.5-flash"
+GEMINI_MODEL = "gemini-2.0-flash"
+
+autio_client = genai.Client(api_key=api_key)
 
 
 # --- Initialization & API Key Configuration ---
@@ -27,9 +31,8 @@ def initialize_session_state():
 initialize_session_state()
 
 try:
-    api_key = "AIzaSyCle6jmFfSjUcUr-D15ieqd-ZOFeKAdOWc"
-    genai.configure(api_key=api_key)
-    if not genai.list_models():
+    generateai.configure(api_key=api_key)
+    if not generateai.list_models():
         st.error("Google AI API key might be invalid or network issue.")
         st.stop()
 except KeyError:
@@ -65,6 +68,20 @@ def reset_app():
     st.rerun()
 
 
+def audio_to_text(audio_file_object):
+    response = autio_client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=[
+            "Generate a transcript of the speech.",
+            types.Part.from_bytes(
+                data=audio_file_object,
+                mime_type="audio/wav",
+            ),
+        ],
+    )
+    return response.text
+
+
 def start_chat_session():
     if st.session_state.timer_duration_minutes > 0:
         st.session_state.timer_running = True
@@ -73,7 +90,7 @@ def start_chat_session():
         st.session_state.duration_seconds = st.session_state.timer_duration_minutes * 60
         st.session_state.start_time = time.time()
         try:
-            model = genai.GenerativeModel(GEMINI_MODEL)
+            model = generateai.GenerativeModel(GEMINI_MODEL)
             st.session_state.gemini_chat = model.start_chat(history=[])
             st.session_state.messages = [
                 {
@@ -178,15 +195,13 @@ if st.session_state.timer_running:
             pass
 
         if st.session_state.timer_running and st.session_state.gemini_chat:
-            if prompt := st.chat_input(
-                "Ask Gemini...", key="chat_input_main"
-            ):  # Added key
+            # if prompt := st.chat_input("Ask Gemini...", key="chat_input_main"):
+            if audio_prompt := st.audio_input("Audio Input", key="chat_input_main"):
+                prompt = audio_to_text(audio_prompt.getvalue())
                 st.session_state.messages.append({"role": "user", "content": prompt})
                 try:
-                    with st.spinner("Gemini is thinking..."):
-
-                        response = st.session_state.gemini_chat.send_message(prompt)
-                        assistant_response = response.text
+                    response = st.session_state.gemini_chat.send_message(prompt)
+                    assistant_response = response.text
                 except Exception as e:
                     st.error(f"An error occurred while contacting Gemini: {e}")
                     assistant_response = "Sorry, I couldn't get a response from the AI."
