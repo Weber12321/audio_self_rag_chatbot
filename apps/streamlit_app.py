@@ -1,16 +1,11 @@
 import streamlit as st
-import PyPDF2
-import io
 import time
 import google.generativeai as genai
-import os
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
+import asyncio
+from streamlit.runtime.scriptrunner import add_script_run_ctx
 
 # Configure Gemini API
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+genai.configure(api_key="AIzaSyCle6jmFfSjUcUr-D15ieqd-ZOFeKAdOWc")
 
 # === page config ===
 if "pdf_content" not in st.session_state:
@@ -23,9 +18,9 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 
-def countdown_timer(chat_total_time):
+async def countdown_timer(chat_total_time):
     """
-    Display a countdown timer with a progress bar
+    Display a countdown timer with a progress bar asynchronously
 
     Parameters:
     - chat_total_time: Time in minutes for the countdown
@@ -46,6 +41,8 @@ def countdown_timer(chat_total_time):
     # Countdown loop
     for i in range(steps, 0, -1):
         # Update progress bar
+        if st.session_state.time_up:
+            break
         progress_bar.progress((steps - i) / steps)
 
         # Display remaining time in minutes and seconds format
@@ -54,15 +51,26 @@ def countdown_timer(chat_total_time):
         secs = int(remaining_seconds % 60)
         timer_text.text(f"倒數計時: {mins}分{secs}秒")
 
-        # Sleep for step time
-        time.sleep(step_time)
+        # Use asyncio.sleep instead of time.sleep
+        await asyncio.sleep(step_time)
 
     # Complete the progress bar
-    progress_bar.progress(1.0)
+    progress_bar.empty()
     timer_text.text("時間到！")
 
     # Return or set a flag to indicate timer completion
     st.session_state.time_up = True
+    return None
+
+
+# Helper function to run async function in a new thread
+def run_async_timer(total_time):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(countdown_timer(total_time))
+    finally:
+        loop.close()
 
 
 st.title("文件對話機器人")
@@ -100,11 +108,22 @@ chat_total_time = st.number_input(
 # === chat ===
 start_chat = st.button("開始對話")
 if start_chat:
-    # Call the countdown timer function
-    countdown_timer(chat_total_time)
+    # Call the async countdown timer function using threading
+    import threading
+
+    timer_thread = threading.Thread(target=run_async_timer, args=(chat_total_time,))
+    timer_thread.daemon = True
+    timer_thread.start()
 
     # Chat Stage
     st.subheader("與文件對話")
+
+    with st.sidebar:
+        stop_chat = st.button("停止對話")
+        if stop_chat:
+            st.session_state.time_up = True
+            st.session_state.messages = []
+            st.success("對話已停止。")
 
     # Display chat messages from history
     for message in st.session_state.messages:
