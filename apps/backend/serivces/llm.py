@@ -1,8 +1,4 @@
 # app/services/ner_service.py
-import pandas as pd
-
-from typing import Dict
-
 from pydantic import BaseModel, Field
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
