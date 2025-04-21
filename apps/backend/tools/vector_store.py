@@ -3,20 +3,10 @@ import os
 from apps.backend.tools.models import create_google_embedding, create_google_model
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_community.vectorstores import FAISS
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_core.tools import tool
 from typing import List, Union
 from langchain_community.document_loaders import PyPDFLoader
 from io import BytesIO
-
-
-def count_tokens(text: str) -> int:
-    llm = create_google_model()
-    return llm.get_num_tokens(text)
-
-
-def create_summarization_with_plaintext():
-    """Use langchain to create a summarization chain for the text."""
-    pass
 
 
 def check_directory_exists() -> bool:
@@ -86,6 +76,7 @@ def create_index_with_file_objects(file_objects):
     print(f"Vector store saved to {save_path}")
 
 
+@tool("retrieve", return_direct=True)
 def retrieve(query: str) -> Union[List[str] | str]:
     """Retrieve relevant documents from the vector store based on the query.
     Args:
@@ -99,7 +90,10 @@ def retrieve(query: str) -> Union[List[str] | str]:
         allow_dangerous_deserialization=True,
     )
 
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
+    retriever = vectorstore.as_retriever(
+        search_kwargs={"k": int(os.getenv("RETRIEVAL_NUMBER", 3))}
+    )
+
     docs = retriever.get_relevant_documents(query)
     if not docs:
         return "No relevant documents found."
