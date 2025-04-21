@@ -38,20 +38,6 @@ def initialize_session_state():
 
 initialize_session_state()
 
-try:
-    generateai.configure(api_key=api_key)
-    if not generateai.list_models():
-        st.error("Google AI API key might be invalid or network issue.")
-        st.stop()
-except KeyError:
-    st.error(
-        "🚨 GOOGLE_API_KEY not found in st.secrets! Please add it to your .streamlit/secrets.toml file."
-    )
-    st.stop()
-except Exception as e:
-    st.error(f"🚨 Failed to configure Google AI: {e}")
-    st.stop()
-
 
 # --- Helper Functions ---
 # (Keep your existing format_time, reset_app, start_chat_session functions)

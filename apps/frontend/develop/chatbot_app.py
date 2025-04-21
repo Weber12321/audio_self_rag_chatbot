@@ -1,27 +1,32 @@
 import os
 import streamlit as st
 import time
+import sys
 
-# from google import genai
-# from google.genai import types
-import google.generativeai as generateai
+# Add path to import backend modules
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+)
+
+# Import Langchain components
+from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.schema import SystemMessage, HumanMessage, AIMessage
+
+# Import your custom model creator
+from apps.backend.tools.models import create_google_model
 
 api_key = os.getenv("GOOGLE_API_KEY", "")
-# Configure Gemini API
+# Configure API
 if not api_key:
     st.error(
         "🚨 GOOGLE_API_KEY not found in st.secrets! Please add it to your .env file."
     )
     st.stop()
 
-# --- Constants ---
-GEMINI_MODEL = "gemini-2.0-flash"
-
-# autio_client = genai.Client(api_key=api_key)
-
 
 # --- Initialization & API Key Configuration ---
-# (Keep your existing initialization and API key config)
 def initialize_session_state():
     """Initializes session state variables if they don't exist."""
     if "initialized" not in st.session_state:
@@ -33,29 +38,13 @@ def initialize_session_state():
         st.session_state.messages = []
         st.session_state.warning_sent = False
         st.session_state.time_up = False
-        st.session_state.gemini_chat = None
-        # st.session_state.last_audio = None
+        st.session_state.langchain_chat = None
 
 
 initialize_session_state()
 
-try:
-    generateai.configure(api_key=api_key)
-    if not generateai.list_models():
-        st.error("Google AI API key might be invalid or network issue.")
-        st.stop()
-except KeyError:
-    st.error(
-        "🚨 GOOGLE_API_KEY not found in st.secrets! Please add it to your .streamlit/secrets.toml file."
-    )
-    st.stop()
-except Exception as e:
-    st.error(f"🚨 Failed to configure Google AI: {e}")
-    st.stop()
-
 
 # --- Helper Functions ---
-# (Keep your existing format_time, reset_app, start_chat_session functions)
 def format_time(seconds):
     if seconds < 0:
         seconds = 0
@@ -71,25 +60,10 @@ def reset_app():
     st.session_state.messages = []
     st.session_state.warning_sent = False
     st.session_state.time_up = False
-    st.session_state.gemini_chat = None
-    # st.session_state.last_audio = None
+    st.session_state.langchain_chat = None
     # Clear potential widget states explicitly if needed (optional)
     # if 'duration_input' in st.session_state: del st.session_state['duration_input']
     st.rerun()
-
-
-# def audio_to_text(audio_file_object):
-#     response = autio_client.models.generate_content(
-#         model="gemini-2.0-flash",
-#         contents=[
-#             "Generate a transcript of the speech.",
-#             types.Part.from_bytes(
-#                 data=audio_file_object,
-#                 mime_type="audio/wav",
-#             ),
-#         ],
-#     )
-#     return response.text
 
 
 def start_chat_session():
@@ -100,8 +74,30 @@ def start_chat_session():
         st.session_state.duration_seconds = st.session_state.timer_duration_minutes * 60
         st.session_state.start_time = time.time()
         try:
-            model = generateai.GenerativeModel(GEMINI_MODEL)
-            st.session_state.gemini_chat = model.start_chat(history=[])
+            # Create LLM using the backend function
+            llm = create_google_model()
+
+            # Create a chat prompt template with system message
+            prompt = ChatPromptTemplate.from_messages(
+                [
+                    SystemMessage(
+                        content="You are a helpful AI assistant. Answer the user's questions concisely and accurately."
+                    ),
+                    MessagesPlaceholder(variable_name="history"),
+                    MessagesPlaceholder(variable_name="input"),
+                ]
+            )
+
+            # Set up memory for conversation history
+            memory = ConversationBufferMemory(
+                return_messages=True, memory_key="history"
+            )
+
+            # Create the conversation chain
+            st.session_state.langchain_chat = ConversationChain(
+                llm=llm, memory=memory, prompt=prompt, verbose=True
+            )
+
             st.session_state.messages = [
                 {
                     "role": "assistant",
@@ -110,7 +106,7 @@ def start_chat_session():
             ]
             st.rerun()
         except Exception as e:
-            st.error(f"Failed to initialize Gemini chat model: {e}")
+            st.error(f"Failed to initialize Langchain chat model: {e}")
             st.session_state.timer_running = False
     else:
         st.error("Please set a duration greater than 0 minutes.")
@@ -204,25 +200,22 @@ if st.session_state.timer_running:
         except IndexError:
             pass
 
-        if st.session_state.timer_running and st.session_state.gemini_chat:
-            if prompt := st.chat_input("Ask Gemini...", key="chat_input_main"):
-                # if audio_prompt := st.audio_input("Audio Input"):
-                # if audio_prompt.getvalue() != st.session_state.last_audio:
-                #     prompt = audio_to_text(audio_prompt.getvalue())
+        if st.session_state.timer_running and st.session_state.langchain_chat:
+            if prompt := st.chat_input("Ask a question...", key="chat_input_main"):
                 st.session_state.messages.append({"role": "user", "content": prompt})
                 try:
-                    response = st.session_state.gemini_chat.send_message(prompt)
-                    assistant_response = response.text
+                    # Use Langchain for chat response
+                    response = st.session_state.langchain_chat.predict(
+                        input=HumanMessage(content=prompt)
+                    )
+                    assistant_response = response
                 except Exception as e:
-                    st.error(f"An error occurred while contacting Gemini: {e}")
-                    assistant_response = "Sorry, I couldn't get a response from the AI."
+                    st.error(f"An error occurred while processing your request: {e}")
+                    assistant_response = "Sorry, I couldn't generate a response."
                 st.session_state.messages.append(
                     {"role": "assistant", "content": assistant_response}
                 )
-                # st.session_state.last_audio = audio_prompt.getvalue()
                 st.rerun()
-                # else:
-                #     pass
 
     if st.session_state.timer_running:
         time.sleep(1)

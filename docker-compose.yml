@@ -11,7 +11,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./apps:/apps
-    command: streamlit run main.py 
+    command: streamlit run frontend/main.py 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8501/"]
       interval: 30s

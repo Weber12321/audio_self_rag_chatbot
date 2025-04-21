@@ -16,20 +16,20 @@ logger.info("Starting application")
 
 pages = {
     "聊天室": [
+        # st.Page(
+        #     "develop/timer_app.py",
+        #     title="倒數計時語音聊天室",
+        #     icon="🤖",
+        # ),
         st.Page(
-            "develop/timer_app.py",
-            title="倒數計時語音聊天室",
-            icon="🤖",
-        ),
-        st.Page(
-            "page/chatbot_rag.py",
+            "develop/chatbot_app.py",
             title="倒數計時文字聊天室",
             icon="🤖",
         ),
     ],
     "機器人服務": [
         st.Page(
-            "page/rag_app.py",
+            "develop/rag_app.py",
             title="PDF RAG 系統",
             icon="📊",
         ),
