@@ -5,13 +5,6 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from typing import List, Union
 
 
-def create_google_embedding():
-    return GoogleGenerativeAIEmbeddings(
-        model=os.getenv("GOOGLE_GENERATIVE_EMBEDDING", "models/text-embedding-004"),
-        google_api_key=os.getenv("GOOGLE_API_KEY", ""),
-    )
-
-
 def count_tokens(text: str) -> int:
     pass
 

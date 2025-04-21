@@ -1,11 +1,20 @@
+import os
 import streamlit as st
-import time
 import google.generativeai as genai
 import asyncio
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 
+
+api_key = os.getenv("GOOGLE_API_KEY", "")
 # Configure Gemini API
-genai.configure(api_key="AIzaSyCle6jmFfSjUcUr-D15ieqd-ZOFeKAdOWc")
+if not api_key:
+    st.error(
+        "🚨 GOOGLE_API_KEY not found in st.secrets! Please add it to your .env file."
+    )
+    st.stop()
+
+# Configure Gemini API
+genai.configure(api_key=api_key)
 
 # === page config ===
 if "pdf_content" not in st.session_state:

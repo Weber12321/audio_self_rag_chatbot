@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import time
 
@@ -5,7 +6,13 @@ import time
 # from google.genai import types
 import google.generativeai as generateai
 
-api_key = "AIzaSyCle6jmFfSjUcUr-D15ieqd-ZOFeKAdOWc"
+api_key = os.getenv("GOOGLE_API_KEY", "")
+# Configure Gemini API
+if not api_key:
+    st.error(
+        "🚨 GOOGLE_API_KEY not found in st.secrets! Please add it to your .env file."
+    )
+    st.stop()
 
 # --- Constants ---
 GEMINI_MODEL = "gemini-2.0-flash"
