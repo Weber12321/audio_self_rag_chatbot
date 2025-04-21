@@ -1,11 +1,15 @@
-# app/services/ner_service.py
+import uuid
+from langchain_core.chat_history import InMemoryChatMessageHistory
 from pydantic import BaseModel, Field
+
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain.agents import AgentExecutor, create_openai_tools_agent
+from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables.history import RunnableWithMessageHistory
 
-from backend.serivces.prompts import *
+from backend.tools.prompts import create_senario_retrivel_prompt
+from backend.services.prompts import *
 from backend.tools.models import create_google_model
 from backend.tools.vector_store import retrieve
 
@@ -27,8 +31,17 @@ class ResponseGrader(BaseModel):
 
 
 class RAGLLMService:
-    def __init__(self):
+    def __init__(self, session_id: str = None, senario_description: str = None):
         """Initialize the LLM service with Open AI"""
+        if not senario_description:
+            senario_description = ""
+
+        self.retrieval_system_prompt = create_senario_retrivel_prompt(
+            senario_description
+        )
+        if not session_id:
+            session_id = str(uuid.uuid4())
+        self.memory = InMemoryChatMessageHistory(session_id=session_id)
         self.llm = create_google_model()
         self.rag_agent = self._create_retriever_agent()
         self.document_validation_chain = self._create_validation_chain()
@@ -45,16 +58,25 @@ class RAGLLMService:
             [
                 (
                     "system",
-                    RETRIEVAL_SYSTEM_PROMPT.strip(),
+                    self.retrieval_system_prompt.strip(),
                 ),
+                MessagesPlaceholder(variable_name="chat_history"),
                 ("human", "{query}"),
                 MessagesPlaceholder(variable_name="agent_scratchpad"),
             ]
         )
 
-        agent = create_openai_tools_agent(self.llm, tools, agent_prompt)
+        agent = create_tool_calling_agent(self.llm, tools, agent_prompt)
 
-        return AgentExecutor(agent=agent, tools=tools, verbose=True)
+        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+        agent_with_chat_history = RunnableWithMessageHistory(
+            agent_executor,
+            lambda session_id: self.memory,
+            input_messages_key="query",
+            history_messages_key="chat_history",
+        )
+
+        return agent_with_chat_history
 
     def _create_validation_chain(self):
         """Create a validation chain for the LLM"""
