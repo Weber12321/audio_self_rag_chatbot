@@ -7,10 +7,6 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from typing import List, Union
 from langchain_community.document_loaders import PyPDFLoader
 from io import BytesIO
-from dotenv import load_dotenv
-
-
-load_dotenv("../../../.env")
 
 
 def count_tokens(text: str) -> int:

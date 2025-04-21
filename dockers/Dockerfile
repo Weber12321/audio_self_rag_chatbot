@@ -1,4 +1,6 @@
-# opinion_analysis Dockerfile
+# docker build -f dockers/Dockerfile -t timer_chatbot:develop .
+
+# Dockerfile
 FROM python:3.13-slim
 
 WORKDIR /apps
@@ -15,7 +17,7 @@ COPY apps/backend/requirements.txt backend_requirements.txt
 COPY apps/frontend/requirements.txt frontend_requirements.txt
 
 # Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt && \
+RUN pip install --no-cache-dir -r backend_requirements.txt && \
     pip install --no-cache-dir -r frontend_requirements.txt
 
 # Copy application code
