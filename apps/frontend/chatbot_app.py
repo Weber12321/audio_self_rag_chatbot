@@ -1,7 +1,8 @@
 import streamlit as st
 import time
-from google import genai
-from google.genai import types
+
+# from google import genai
+# from google.genai import types
 import google.generativeai as generateai
 
 api_key = "AIzaSyCle6jmFfSjUcUr-D15ieqd-ZOFeKAdOWc"
@@ -9,7 +10,7 @@ api_key = "AIzaSyCle6jmFfSjUcUr-D15ieqd-ZOFeKAdOWc"
 # --- Constants ---
 GEMINI_MODEL = "gemini-2.0-flash"
 
-autio_client = genai.Client(api_key=api_key)
+# autio_client = genai.Client(api_key=api_key)
 
 
 # --- Initialization & API Key Configuration ---
@@ -26,7 +27,7 @@ def initialize_session_state():
         st.session_state.warning_sent = False
         st.session_state.time_up = False
         st.session_state.gemini_chat = None
-        st.session_state.last_audio = None
+        # st.session_state.last_audio = None
 
 
 initialize_session_state()
@@ -64,24 +65,24 @@ def reset_app():
     st.session_state.warning_sent = False
     st.session_state.time_up = False
     st.session_state.gemini_chat = None
-    st.session_state.last_audio = None
+    # st.session_state.last_audio = None
     # Clear potential widget states explicitly if needed (optional)
     # if 'duration_input' in st.session_state: del st.session_state['duration_input']
     st.rerun()
 
 
-def audio_to_text(audio_file_object):
-    response = autio_client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=[
-            "Generate a transcript of the speech.",
-            types.Part.from_bytes(
-                data=audio_file_object,
-                mime_type="audio/wav",
-            ),
-        ],
-    )
-    return response.text
+# def audio_to_text(audio_file_object):
+#     response = autio_client.models.generate_content(
+#         model="gemini-2.0-flash",
+#         contents=[
+#             "Generate a transcript of the speech.",
+#             types.Part.from_bytes(
+#                 data=audio_file_object,
+#                 mime_type="audio/wav",
+#             ),
+#         ],
+#     )
+#     return response.text
 
 
 def start_chat_session():
@@ -197,28 +198,24 @@ if st.session_state.timer_running:
             pass
 
         if st.session_state.timer_running and st.session_state.gemini_chat:
-            # if prompt := st.chat_input("Ask Gemini...", key="chat_input_main"):
-            if audio_prompt := st.audio_input("Audio Input"):
-                if audio_prompt.getvalue() != st.session_state.last_audio:
-                    prompt = audio_to_text(audio_prompt.getvalue())
-                    st.session_state.messages.append(
-                        {"role": "user", "content": prompt}
-                    )
-                    try:
-                        response = st.session_state.gemini_chat.send_message(prompt)
-                        assistant_response = response.text
-                    except Exception as e:
-                        st.error(f"An error occurred while contacting Gemini: {e}")
-                        assistant_response = (
-                            "Sorry, I couldn't get a response from the AI."
-                        )
-                    st.session_state.messages.append(
-                        {"role": "assistant", "content": assistant_response}
-                    )
-                    st.session_state.last_audio = audio_prompt.getvalue()
-                    st.rerun()
-                else:
-                    pass
+            if prompt := st.chat_input("Ask Gemini...", key="chat_input_main"):
+                # if audio_prompt := st.audio_input("Audio Input"):
+                # if audio_prompt.getvalue() != st.session_state.last_audio:
+                #     prompt = audio_to_text(audio_prompt.getvalue())
+                st.session_state.messages.append({"role": "user", "content": prompt})
+                try:
+                    response = st.session_state.gemini_chat.send_message(prompt)
+                    assistant_response = response.text
+                except Exception as e:
+                    st.error(f"An error occurred while contacting Gemini: {e}")
+                    assistant_response = "Sorry, I couldn't get a response from the AI."
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": assistant_response}
+                )
+                # st.session_state.last_audio = audio_prompt.getvalue()
+                st.rerun()
+                # else:
+                #     pass
 
     if st.session_state.timer_running:
         time.sleep(1)
