@@ -1,3 +1,4 @@
+import logging
 import os
 from apps.backend.tools.models import create_google_embedding, create_google_model
 from langchain_experimental.text_splitter import SemanticChunker
@@ -6,6 +7,10 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from typing import List, Union
 from langchain_community.document_loaders import PyPDFLoader
 from io import BytesIO
+from dotenv import load_dotenv
+
+
+load_dotenv("../../../.env")
 
 
 def count_tokens(text: str) -> int:
@@ -37,14 +42,14 @@ def create_index_with_file_objects(file_objects):
     if check_directory_exists():
         print("Directory already exists. Exiting...")
         return
-
+    logging.info("Creating index with file objects...")
     embeddings_function = create_google_embedding()
     semantic_chunker = SemanticChunker(
         embeddings_function, breakpoint_threshold_type="percentile"
     )
 
     all_splits = []
-
+    logging.info("Processing files...")
     # Process each file
     for file_obj in file_objects:
         # Handle PDF files using PyPDFLoader
@@ -94,10 +99,7 @@ def retrieve(query: str) -> Union[List[str] | str]:
     """
     vectorstore = FAISS.load_local(
         os.getenv("VECTORSTORE_PATH", "fixtures/vector_db"),
-        GoogleGenerativeAIEmbeddings(
-            model=os.getenv("GOOGLE_GENERATIVE_EMBEDDING", "textembedding-gecko"),
-            google_api_key=os.getenv("GOOGLE_API_KEY", ""),
-        ),
+        create_google_embedding(),
         allow_dangerous_deserialization=True,
     )
 

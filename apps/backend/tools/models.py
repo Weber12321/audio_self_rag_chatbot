@@ -5,13 +5,14 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGener
 def create_google_embedding():
     return GoogleGenerativeAIEmbeddings(
         model=os.getenv("GOOGLE_GENERATIVE_EMBEDDING", "models/text-embedding-004"),
-        google_api_key=os.getenv("GOOGLE_API_KEY", ""),
+        google_api_key="AIzaSyCle6jmFfSjUcUr-D15ieqd-ZOFeKAdOWc",
     )
 
 
 def create_google_model():
     return ChatGoogleGenerativeAI(
         model=os.getenv("GOOGLE_GENERATIVE_MODEL", "gemini-2.0-flash"),
+        google_api_key="AIzaSyCle6jmFfSjUcUr-D15ieqd-ZOFeKAdOWc",
         temperature=0,
         max_tokens=None,
         timeout=None,
