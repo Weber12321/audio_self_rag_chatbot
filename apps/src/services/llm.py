@@ -11,6 +11,7 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from src.tools.prompts import (
     create_query_rewrite_prompt,
     create_scenarios_retrivel_prompt,
+    create_scenarios_supervisor_prompt,
 )
 from src.services.prompts import *
 from src.tools.models import create_google_model
@@ -114,3 +115,21 @@ class RAGLLMService:
         )
 
         return rewrite_prompt | self.llm | StrOutputParser()
+
+
+class EvalLLMService:
+
+    def __init__(self, scenarios_description: str = None):
+        """Initialize the LLM service with Open AI"""
+        if not scenarios_description:
+            scenarios_description = ""
+        self.llm = create_google_model()
+        self.system_prompt = create_scenarios_supervisor_prompt(scenarios_description)
+        self.eval_chain = self._create_eval_chain()
+
+    def _create_eval_chain(self):
+        """
+        Build the agent with the given chat history and scenarios description.
+        """
+
+        return self.system_prompt | self.llm | StrOutputParser()

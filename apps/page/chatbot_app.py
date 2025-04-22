@@ -1,122 +1,17 @@
 import os
 from typing import Dict, List
+from apps.src.agents.supervisor_agent import SupervisorAgent
 import streamlit as st
 import time
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 from src.agents.rag_agent import SelfRAGWorkflow
 from src.utils.log_handler import setup_logger
 
 # Initialize logger
 logger = setup_logger(__name__)
 
-api_key = os.getenv("GOOGLE_API_KEY", "")
-# Configure API
-if not api_key:
-    logger.error("GOOGLE_API_KEY not found in environment variables")
-    st.error(
-        "🚨 GOOGLE_API_KEY not found in st.secrets! Please add it to your .env file."
-    )
-    st.stop()
-
-
-def convert_to_langchain_messages(messages: List[Dict]) -> List:
-    """Convert the session state messages to langchain message objects"""
-    lc_messages = []
-    for message in messages:
-        if message["role"] == "user":
-            lc_messages.append(HumanMessage(content=message["content"]))
-        elif message["role"] == "assistant":
-            lc_messages.append(AIMessage(content=message["content"]))
-    return lc_messages
-
-
-# --- Initialization & API Key Configuration ---
-def initialize_session_state():
-    """Initializes session state variables if they don't exist."""
-    if "initialized" not in st.session_state:
-        logger.info("Initializing session state variables")
-        st.session_state.initialized = True
-        st.session_state.timer_duration_minutes = 5
-        st.session_state.timer_running = False
-        st.session_state.start_time = None
-        st.session_state.duration_seconds = 0
-        st.session_state.messages = []
-        st.session_state.warning_sent = False
-        st.session_state.time_up = False
-        st.session_state.langchain_chat = None
-        st.session_state.chat_session_id = None
-
-
-initialize_session_state()
-
-
-# --- Helper Functions ---
-def format_time(seconds):
-    if seconds < 0:
-        seconds = 0
-    minutes = int(seconds // 60)
-    secs = int(seconds % 60)
-    return f"{minutes:02d}:{secs:02d}"
-
-
-def reset_app():
-    logger.info("Resetting application state")
-    st.session_state.timer_running = False
-    st.session_state.start_time = None
-    st.session_state.duration_seconds = 0
-    st.session_state.messages = []
-    st.session_state.warning_sent = False
-    st.session_state.time_up = False
-    st.session_state.langchain_chat = None
-    st.session_state.chat_session_id = None
-    # Clear potential widget states explicitly if needed (optional)
-    # if 'duration_input' in st.session_state: del st.session_state['duration_input']
-    st.rerun()
-
-
-def start_chat_session():
-    if st.session_state.timer_duration_minutes > 0:
-        logger.info(
-            f"Starting new chat session with {st.session_state.timer_duration_minutes} minute duration"
-        )
-        st.session_state.timer_running = True
-        st.session_state.time_up = False
-        st.session_state.warning_sent = False
-        st.session_state.duration_seconds = st.session_state.timer_duration_minutes * 60
-        st.session_state.start_time = time.time()
-        st.session_state.chat_session_id = (
-            "test_session_id"  # Placeholder for session ID
-        )
-        try:
-            # Create LLM using the backend function
-            # llm = create_google_model()
-
-            # Create a chat prompt template with system message
-            # prompt = ChatPromptTemplate.from_messages(
-            #     [
-            #         SystemMessage(
-            #             content="You are a helpful AI assistant. Answer the user's questions concisely and accurately."
-            #         ),
-            #         MessagesPlaceholder(variable_name="history"),
-            #         MessagesPlaceholder(variable_name="input"),
-            #     ]
-            # )
-
-            # # Set up memory for conversation history
-            # memory = ConversationBufferMemory(
-            #     return_messages=True, memory_key="history"
-            # )
-
-            # # Create the conversation chain
-            # st.session_state.langchain_chat = ConversationChain(
-            #     llm=llm, memory=memory, prompt=prompt, verbose=True
-            # )
-            logger.info(
-                f"Initializing SelfRAGWorkflow for session: {st.session_state.chat_session_id}"
-            )
-            st.session_state.langchain_chat = SelfRAGWorkflow(
-                session_id=st.session_state.chat_session_id,
-                scenarios_description="""
+# scenarios_description
+scenarios_description = """
 文件目的與適用範圍
 
 目的： [9] 本手冊旨在規範船隊電腦（含 IT 及 OT 算貨電腦）發生病毒或惡意程式威脅事件時的標準處理流程，由機房同仁（依時段可能是系統管理部系統服務課 SSV 或 UHD）通知相關人員（船長、SSV 船隊防毒軟體管理人員、海技部），進行檢查與處理，以阻止惡意軟體攻擊及擴散，確保船隊資訊安全。
@@ -182,7 +77,101 @@ USB 來源： 路徑非 C:\ 或 D:\ 開頭。
 通知時，需查詢指定路徑下的 船隊中毒事件處理輪值表，依輪值順序聯絡 SSV 值班人員。 [77]
 總結：
 這份手冊提供了一套結構化的流程來應對船隊電腦病毒事件。關鍵在於區分處理時段、判斷船隻類型與 ESIS 建置狀況、識別病毒來源（特別是對於未建置 ESIS 的船隻），並根據不同情況採取相應的通知和處置措施，最後確保事件得到追蹤與適當的升級處理。
-""",
+"""
+
+
+api_key = os.getenv("GOOGLE_API_KEY", "")
+# Configure API
+if not api_key:
+    logger.error("GOOGLE_API_KEY not found in environment variables")
+    st.error(
+        "🚨 GOOGLE_API_KEY not found in st.secrets! Please add it to your .env file."
+    )
+    st.stop()
+
+
+def convert_to_langchain_messages(messages: List[Dict]) -> List[BaseMessage]:
+    """Convert the session state messages to langchain message objects"""
+    lc_messages = []
+    for message in messages:
+        if message["role"] == "user":
+            lc_messages.append(HumanMessage(content=message["content"]))
+        elif message["role"] == "assistant":
+            lc_messages.append(AIMessage(content=message["content"]))
+    return lc_messages
+
+
+# --- Initialization & API Key Configuration ---
+def initialize_session_state():
+    """Initializes session state variables if they don't exist."""
+    if "initialized" not in st.session_state:
+        logger.info("Initializing session state variables")
+        st.session_state.initialized = True
+        st.session_state.timer_duration_minutes = 5
+        st.session_state.timer_running = False
+        st.session_state.start_time = None
+        st.session_state.duration_seconds = 0
+        st.session_state.messages = []
+        st.session_state.warning_sent = False
+        st.session_state.time_up = False
+        st.session_state.langchain_chat = None
+        st.session_state.supervisor_agent = None
+        st.session_state.chat_session_id = None
+
+
+initialize_session_state()
+
+
+# --- Helper Functions ---
+def format_time(seconds):
+    if seconds < 0:
+        seconds = 0
+    minutes = int(seconds // 60)
+    secs = int(seconds % 60)
+    return f"{minutes:02d}:{secs:02d}"
+
+
+def reset_app():
+    logger.info("Resetting application state")
+    st.session_state.timer_running = False
+    st.session_state.start_time = None
+    st.session_state.duration_seconds = 0
+    st.session_state.messages = []
+    st.session_state.warning_sent = False
+    st.session_state.time_up = False
+    st.session_state.langchain_chat = None
+    st.session_state.supervisor_agent = None
+    st.session_state.chat_session_id = None
+    # Clear potential widget states explicitly if needed (optional)
+    # if 'duration_input' in st.session_state: del st.session_state['duration_input']
+    st.rerun()
+
+
+def start_chat_session():
+    if st.session_state.timer_duration_minutes > 0:
+        logger.info(
+            f"Starting new chat session with {st.session_state.timer_duration_minutes} minute duration"
+        )
+        st.session_state.timer_running = True
+        st.session_state.time_up = False
+        st.session_state.warning_sent = False
+        st.session_state.duration_seconds = st.session_state.timer_duration_minutes * 60
+        st.session_state.start_time = time.time()
+        st.session_state.chat_session_id = (
+            "test_session_id"  # Placeholder for session ID
+        )
+        try:
+            logger.info(
+                f"Initializing SelfRAGWorkflow for session: {st.session_state.chat_session_id}"
+            )
+
+            st.session_state.langchain_chat = SelfRAGWorkflow(
+                session_id=st.session_state.chat_session_id,
+                scenarios_description=scenarios_description,
+            )
+
+            st.session_state.supervisor_agent = SupervisorAgent(
+                scenarios_description=scenarios_description
             )
 
             st.session_state.messages = [
@@ -353,6 +342,18 @@ if st.session_state.time_up:
     chat_placeholder.empty()
 
     final_message_placeholder.success("⏰ Time's up! Chat session ended.")
+
+    if st.session_state.supervisor_agent:
+        supervisor_initial_state = {
+            "chat_history": convert_to_langchain_messages(st.session_state.messages),
+            "feedback": "",
+        }
+        supervisor_response = st.session_state.supervisor_agent.workflow.invoke(
+            supervisor_initial_state
+        )
+        feedback = supervisor_response["feedback"]
+        st.text_area("對話回饋", value=feedback.strip(), height=600, disabled=True)
+
     expandar = st.expander("對話歷史紀錄", expanded=False)
     with expandar:
         display_messages = [
@@ -369,10 +370,30 @@ if st.session_state.time_up:
 
     st.info("Click Reset to start a new session.")
 
-# --- Reset Button ---
-# Make sure this is OUTSIDE the main timer running/time up blocks if you want it always visible after start
-if st.session_state.start_time is not None or st.session_state.time_up:
-    # Add a key to the reset button
-    if st.button("Reset Session", key="config_reset_button"):
-        logger.info("User clicked Reset Session button")
-        reset_app()
+
+with st.sidebar:
+    st.header("機器人簡述")
+    st.info(
+        """
+這個機器人專門根據文檔做查詢以及回覆，請您和它對話。
+對話結束後它會給予您一些回饋，幫助您成長。
+    """
+    )
+
+    st.header("機器人功能")
+    st.markdown(
+        """
+        🔍 向量查詢與問題改寫
+        ☑️ 相關性驗證
+        ✒️ 對話內容評估
+        """
+    )
+    # --- Reset Button ---
+    # Make sure this is OUTSIDE the main timer running/time up blocks if you want it always visible after start
+    if st.session_state.start_time is not None:
+        st.header("重置任務")
+        st.info("按下重置按鈕將會清除所有對話紀錄，並重新開始新的對話。")
+        # Add a key to the reset button
+        if st.button("重置任務按鈕", type="primary", key="config_reset_button"):
+            logger.info("User clicked Reset Session button")
+            reset_app()
