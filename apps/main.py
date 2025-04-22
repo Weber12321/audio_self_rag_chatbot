@@ -32,6 +32,11 @@ pages = {
             title="PDF RAG 系統",
             icon="📊",
         ),
+        st.Page(
+            "page/scenario_app.py",
+            title="情境管理系統",
+            icon="📊",
+        ),
     ],
 }
 

@@ -1,83 +1,48 @@
 import os
-from typing import Dict, List
-from apps.src.agents.supervisor_agent import SupervisorAgent
-import streamlit as st
 import time
-from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
+import redis
+from typing import Dict, List
+
+import streamlit as st
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+
 from src.agents.rag_agent import SelfRAGWorkflow
+from src.agents.supervisor_agent import SupervisorAgent
 from src.utils.log_handler import setup_logger
 
 # Initialize logger
 logger = setup_logger(__name__)
 
-# scenarios_description
-scenarios_description = """
-文件目的與適用範圍
 
-目的： [9] 本手冊旨在規範船隊電腦（含 IT 及 OT 算貨電腦）發生病毒或惡意程式威脅事件時的標準處理流程，由機房同仁（依時段可能是系統管理部系統服務課 SSV 或 UHD）通知相關人員（船長、SSV 船隊防毒軟體管理人員、海技部），進行檢查與處理，以阻止惡意軟體攻擊及擴散，確保船隊資訊安全。
-適用對象： [9] 船上同仁使用的所有船隊 IT 電腦及 OT 算貨電腦。
-名詞定義
+# redis
+@st.cache_resource
+def get_redis_connection():
+    try:
+        r = redis.Redis(
+            host=os.getenv("REDIS_HOST", "localhost"),
+            port=6379,
+            db=0,
+            decode_responses=True,  # Automatically decode response bytes to strings
+        )
+        return r
+    except Exception as e:
+        st.error(f"Failed to connect to Redis: {e}")
+        return None
 
-長榮資安整合平台 (ESIS)： [9] 優先部署於新造船及衛星網路不限流量船隻，用於統一部署、管理、監控船隊資安政策，彙整管控資訊，並記錄資安事件處理歷程的系統。
-船隊 IT 電腦： [9] 指用於資料處理的資訊技術系統，如船長通信電腦、辦公室公務電腦等。手冊列有具體的電腦代碼 (如 BRG1, DECK1, LOADING, ECR1, MS 等)。 [11], [12]
-船隊 OT 電腦： [11] 指用於直接監控和控制物理設備的操作技術系統，如 ICMS、機艙監控電腦、冷凍櫃監控系統等。
-事件處理觸發時機
 
-時機 1： [13] 接獲船上同仁通報電腦出現病毒攔截告警或惡意程式威脅。
-時機 2： [15] UHD 監控信箱收到主旨開頭為 "[Ship Virus Alert]" 的警示郵件。此類郵件主旨會標示船名和電腦名稱，內文包含檔案路徑 (File Path)、事件時間 (Event time)、使用者 (User) 及電腦名稱 (Computer)。
-核心處理步驟
+redis_conn = get_redis_connection()
 
-判斷處理時段： [17]
 
-上班時間：由系統管理部系統服務課 (SSV) 船隊防毒軟體管理負責人處理。
-下班時間：由 UHD 依後續步驟寄送通知信。
-判斷通知對象： [19]
+def get_all_keys(r):
+    if r:
+        return r.keys("*")
+    return []
 
-先從 Alert 信件主旨取得船名，利用通訊錄 (需有 Inmarsat AB 通訊錄) 找到船長 Master 信箱。 [19]
-EVER / UNI 開頭船隻： [19], [21]
-收件人 (To)：船長、海技部方銘彬專工。
-副本 (CC)：吳欣芝、資安管理專用信箱、資訊安全部信箱、人事部主管、海技一課課信箱、系統管理部經理、SSV 課信箱及多位 SSV 課內人員。
-ITAL 開頭及 EVER COZY 船隻： [21]
-收件人 (To)：船長、ITS 海技部李維修船長。
-副本 (CC)[已移除電子郵件地址]、系統管理部經理、SSV 課信箱及多位 SSV 課內人員。
-判斷是否已建置 ESIS 平台： [24]
 
-檢查指定路徑下的 資安管理主機建置進度.xlsx 檔案 (J 欄位 ● 表示已建置，N/A 表示未建置)。 [24]
-若已建置 ESIS： [24], [26], [27], [29]
-依步驟 2 寄送通知信。
-信件主旨格式：Virus detected with【船名】。
-信件內容需提醒船長登入 ESIS 網站 (提供連結) 獲取詳細資訊、追查病毒來源、執行全機掃描並在 ESIS 網站回報。
-務必附上附件 Notification of launching 'Evergreen Security Integrated System(ESIS).pdf。
-未建置 ESIS 平台 - 判斷病毒來源： [32], [33]
-
-根據 Alert 信件中的 [File path] 判斷：
-USB 來源： 路徑非 C:\ 或 D:\ 開頭。
-公檔來源： 路徑為 D:\share\ 開頭。
-其他來源： 路徑為 C:\ 或 D:\ 開頭，但非 D:\share\。
-未建置 ESIS 平台 - 寄送對應通知信： [34]
-
-從 Alert 信件取得 [FilePath], Event Time, [User], [Computer] 填入對應範本。
-範本 1 (USB 來源)： [34], [37], [38], [39]
-主旨：Virus detected with【船名】。
-內容：告知中毒電腦、時間、使用者、路徑，並指明是 USB 裝置。要求立即拔除 USB，對該電腦全機掃毒。中毒 USB 未格式化前不得再接入 IT 電腦。若其他電腦用過此 USB，也需更新病毒碼並全機掃毒。最後要求回報掃毒結果並追查來源。
-範本 2 (公檔來源)： [47], [50], [51], [52], [53], [54]
-主旨：Virus detected with【船名】。
-內容：告知中毒電腦、時間、使用者、路徑，並指明是 share 共用磁碟槽。要求立即對該電腦全機掃毒。因病毒可能從其他電腦感染至公檔，需確認無私人電腦連接 IT 網路，並要求全船所有電腦更新病毒碼、全機掃毒，回報結果並追查來源。
-範本 3 (其他來源)： [Image 6], [71], [72]
-主旨：Virus detected with【船名】。
-內容：告知中毒電腦、時間、使用者、路徑。要求立即對該電腦全機掃毒，回報結果並追查來源。
-處理船長回報： [73]
-
-所有船長的回報結果及後續追蹤，皆由 SSV 船隊防毒軟體管理值班人員接手處理。
-若 UHD 信箱收到船長的回報，需將信件轉寄給 SSV 值班人員，並 CC 給步驟 2 中的所有收/副本人員。
-通知 SSV 值班人員的時機 (UHD 操作)： [75], [77]
-
-若 UHD 監控信箱持續收到 2 次或以上來自同一艘船、相同 File Path、相同 Computer Name 的病毒攔截信件。 [75]
-接獲船長要求請公司電算同仁協助處理資安事件時。 [75]
-通知時，需查詢指定路徑下的 船隊中毒事件處理輪值表，依輪值順序聯絡 SSV 值班人員。 [77]
-總結：
-這份手冊提供了一套結構化的流程來應對船隊電腦病毒事件。關鍵在於區分處理時段、判斷船隻類型與 ESIS 建置狀況、識別病毒來源（特別是對於未建置 ESIS 的船隻），並根據不同情況採取相應的通知和處置措施，最後確保事件得到追蹤與適當的升級處理。
-"""
+def get_value(r, key):
+    if r:
+        return r.get(key)
+    return None
 
 
 api_key = os.getenv("GOOGLE_API_KEY", "")
@@ -117,6 +82,7 @@ def initialize_session_state():
         st.session_state.langchain_chat = None
         st.session_state.supervisor_agent = None
         st.session_state.chat_session_id = None
+        st.session_state.scenarios_key = None
 
 
 initialize_session_state()
@@ -142,6 +108,7 @@ def reset_app():
     st.session_state.langchain_chat = None
     st.session_state.supervisor_agent = None
     st.session_state.chat_session_id = None
+    st.session_state.scenarios_key = None
     # Clear potential widget states explicitly if needed (optional)
     # if 'duration_input' in st.session_state: del st.session_state['duration_input']
     st.rerun()
@@ -163,6 +130,15 @@ def start_chat_session():
         try:
             logger.info(
                 f"Initializing SelfRAGWorkflow for session: {st.session_state.chat_session_id}"
+            )
+
+            if st.session_state.scenarios_key is None:
+                st.error("Please select a scenario before starting the session.")
+                st.stop()
+                return
+
+            scenarios_description = get_value(
+                redis_conn, st.session_state.scenarios_key
             )
 
             st.session_state.langchain_chat = SelfRAGWorkflow(
@@ -375,7 +351,7 @@ with st.sidebar:
     st.header("機器人簡述")
     st.info(
         """
-這個機器人專門根據文檔做查詢以及回覆，請您和它對話。
+這個機器人專門根據情境以及對應的文檔做查詢以及回覆，請您和它對話。    
 對話結束後它會給予您一些回饋，幫助您成長。
     """
     )
@@ -383,10 +359,19 @@ with st.sidebar:
     st.header("機器人功能")
     st.markdown(
         """
-        🔍 向量查詢與問題改寫
-        ☑️ 相關性驗證
-        ✒️ 對話內容評估
+        ✉️ 建立情境     
+        🔍 向量查詢與問題改寫     
+        ☑️ 相關性驗證     
+        ✒️ 對話內容評估   
         """
+    )
+
+    st.header("選擇情境")
+    st.info("選擇任務情境，並開始對話。")
+    st.session_state.scenarios_key = st.selectbox(
+        "情境選擇",
+        options=get_all_keys(redis_conn),
+        index=0,
     )
     # --- Reset Button ---
     # Make sure this is OUTSIDE the main timer running/time up blocks if you want it always visible after start

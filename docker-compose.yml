@@ -4,6 +4,8 @@ services:
   server:
     image: timer_chatbot:develop
     container_name: timer_chatbot
+    depends_on:
+      - redis
     ports:
       - "8501:8501"
     env_file:
@@ -17,3 +19,16 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+    
+  redis:
+    image: redis:latest
+    container_name: timer_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
+    driver: local
