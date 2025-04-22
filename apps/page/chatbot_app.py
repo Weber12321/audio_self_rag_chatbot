@@ -17,7 +17,7 @@ logger = setup_logger(__name__)
 
 # redis
 @st.cache_resource
-def get_redis_connection():
+def get_redis_scenarios_connection():
     try:
         r = redis.Redis(
             host=os.getenv("REDIS_HOST", "localhost"),
@@ -31,7 +31,23 @@ def get_redis_connection():
         return None
 
 
-redis_handler = RedisHandler(get_redis_connection())
+@st.cache_resource
+def get_redis_vector_search_connection():
+    try:
+        r = redis.Redis(
+            host=os.getenv("REDIS_HOST", "localhost"),
+            port=6379,
+            db=1,
+            decode_responses=True,  # Automatically decode response bytes to strings
+        )
+        return r
+    except Exception as e:
+        st.error(f"Failed to connect to Redis: {e}")
+        return None
+
+
+redis_scenario_handler = RedisHandler(get_redis_scenarios_connection())
+redis_vector_search_handler = RedisHandler(get_redis_vector_search_connection())
 
 
 def get_all_keys(r):
@@ -84,6 +100,7 @@ def initialize_session_state():
         st.session_state.supervisor_agent = None
         st.session_state.chat_session_id = None
         st.session_state.scenarios_key = None
+        st.session_state.vector_search_key = None
 
 
 initialize_session_state()
@@ -110,6 +127,7 @@ def reset_app():
     st.session_state.supervisor_agent = None
     st.session_state.chat_session_id = None
     st.session_state.scenarios_key = None
+    st.session_state.vector_search_key = None
     # Clear potential widget states explicitly if needed (optional)
     # if 'duration_input' in st.session_state: del st.session_state['duration_input']
     st.rerun()
@@ -138,7 +156,7 @@ def start_chat_session():
                 st.stop()
                 return
 
-            scenarios_description = redis_handler.get_value(
+            scenarios_description = redis_scenario_handler.get_value(
                 st.session_state.scenarios_key
             )
 
@@ -371,12 +389,23 @@ with st.sidebar:
     st.info("選擇任務情境，並開始對話。")
     st.session_state.scenarios_key = st.selectbox(
         "情境選擇",
-        options=redis_handler.get_all_keys(),
+        options=redis_scenario_handler.get_all_keys(),
         index=0,
     )
 
     st.header("選擇知識庫")
     st.info("選擇知識庫，並開始對話。")
+    st.session_state.vector_search_key = st.selectbox(
+        "知識庫選擇",
+        options=redis_vector_search_handler.get_all_keys(),
+        index=0,
+    )
+    RedisHandler.set_current_key(
+        st.session_state.vector_search_key
+    )  # Set the current key for vector search
+    st.warning(
+        f"請注意，知識庫的內容會影響機器人的回答，目前知識庫 {st.session_state.vector_search_key}"
+    )  # Add a warning about the knowledge base content
 
     # --- Reset Button ---
     # Make sure this is OUTSIDE the main timer running/time up blocks if you want it always visible after start
