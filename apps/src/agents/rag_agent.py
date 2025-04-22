@@ -27,12 +27,12 @@ class SelfRAGWorkflow:
         """Initialize the Self-RAG workflow with Open AI"""
         if not scenarios_description:
             scenarios_description = ""
-        self.session_id = session_id
         if not session_id:
             session_id = str(uuid.uuid4())
 
+        self.session_id = session_id
         self.llm_service = RAGLLMService(
-            session_id=session_id, scenarios_description=scenarios_description
+            session_id=self.session_id, scenarios_description=scenarios_description
         )
 
         self.workflow = self._build_workflow()
@@ -73,7 +73,8 @@ class SelfRAGWorkflow:
         """An agent which decide to retrieve relevant documents based on the query or reply the LLM answer directly"""
         # Extract the query from the latest human message
         response = self.llm_service.rag_agent.invoke(
-            {"query": state["messages"][-1].content}
+            {"query": state["messages"][-1].content},
+            config={"configurable": {"session_id": self.session_id}},
         )
         if isinstance(response["output"], str):
             state["is_retrieval_related"] = False

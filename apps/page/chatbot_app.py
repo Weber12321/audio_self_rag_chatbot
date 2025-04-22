@@ -279,49 +279,68 @@ if st.session_state.timer_running:
         progress_bar_placeholder.progress(1.0)
         final_message_placeholder.success("⏰ Time's up! Chat session ended.")
 
+    # Only show the chat interface if the time isn't up
     with chat_placeholder:
-        st.write("##### 對話中")
-        # Display the last message in the chat
-        try:
-            last_two_messages = st.session_state.messages[-2]
-            with st.chat_message(last_two_messages["role"]):
-                st.markdown(last_two_messages["content"])
-        except IndexError:
-            # If there are not enough messages, just skip this part
-            pass
-        try:
-            button_mnessage = st.session_state.messages[-1]
-            with st.chat_message(button_mnessage["role"]):
-                st.markdown(button_mnessage["content"])
-        except IndexError:
-            pass
+        if not st.session_state.time_up:  # Add this condition
+            st.write("##### 對話中")
+            # Display the last message in the chat
+            try:
+                last_two_messages = st.session_state.messages[-2]
+                with st.chat_message(last_two_messages["role"]):
+                    st.markdown(last_two_messages["content"])
+            except IndexError:
+                # If there are not enough messages, just skip this part
+                pass
+            try:
+                button_mnessage = st.session_state.messages[-1]
+                with st.chat_message(button_mnessage["role"]):
+                    st.markdown(button_mnessage["content"])
+            except IndexError:
+                pass
 
-        if st.session_state.timer_running and st.session_state.langchain_chat:
-            if prompt := st.chat_input("Ask a question...", key="chat_input_main"):
-                logger.info(
-                    f"User sent message: {prompt[:50]}{'...' if len(prompt) > 50 else ''}"
-                )
-                st.session_state.messages.append({"role": "user", "content": prompt})
-                try:
-                    # Use Langchain for chat response
-                    logger.debug("Invoking LangChain workflow")
-                    response = st.session_state.langchain_chat.workflow.invoke(
-                        {"query": prompt}
+            if st.session_state.timer_running and st.session_state.langchain_chat:
+                if prompt := st.chat_input("Ask a question...", key="chat_input_main"):
+                    st.session_state.messages.append(
+                        {"role": "user", "content": prompt}
                     )
-                    assistant_response = response
-                    logger.info(
-                        f"Generated response: {assistant_response[:50]}{'...' if len(assistant_response) > 50 else ''}"
+                    lc_messages = convert_to_langchain_messages(
+                        st.session_state.messages
                     )
-                except Exception as e:
-                    logger.error(f"Error generating response: {str(e)}", exc_info=True)
-                    st.error(f"An error occurred while processing your request: {e}")
-                    assistant_response = (
-                        f"Sorry, I couldn't generate a response due to {str(e)}"
+                    try:
+                        # Use Langchain for chat response
+                        logger.debug("Invoking LangChain workflow")
+
+                        initial_state = {
+                            "messages": lc_messages,
+                            "max_generation": 2,
+                            "docs": [],
+                            "is_retrieval_related": False,
+                            "validated_docs": [],
+                            "response": "",
+                            "response_validated": None,
+                            "max_generation": 2,
+                            "query_rewritten": False,
+                            "rewritten_query": "",
+                        }
+
+                        response = st.session_state.langchain_chat.workflow.invoke(
+                            initial_state
+                        )
+                        assistant_response = response["messages"][-1].content
+                    except Exception as e:
+                        logger.error(
+                            f"Error generating response: {str(e)}", exc_info=True
+                        )
+                        st.error(
+                            f"An error occurred while processing your request: {e}"
+                        )
+                        assistant_response = (
+                            f"Sorry, I couldn't generate a response due to {str(e)}"
+                        )
+                    st.session_state.messages.append(
+                        {"role": "assistant", "content": assistant_response}
                     )
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": assistant_response}
-                )
-                st.rerun()
+                    st.rerun()
 
     if st.session_state.timer_running:
         time.sleep(1)
@@ -330,11 +349,12 @@ if st.session_state.timer_running:
 
 # --- Time's Up Phase ---
 if st.session_state.time_up:
-    # (Your existing time's up logic)
-    # ... (make sure this section is correctly indented) ...
+    # Clear the running phase chat interface by emptying the chat_placeholder first
+    chat_placeholder.empty()
+
     final_message_placeholder.success("⏰ Time's up! Chat session ended.")
-    with chat_placeholder:
-        st.write("##### 對話歷史紀錄")
+    expandar = st.expander("對話歷史紀錄", expanded=False)
+    with expandar:
         display_messages = [
             m
             for m in st.session_state.messages
@@ -346,6 +366,7 @@ if st.session_state.time_up:
             for message in display_messages:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
+
     st.info("Click Reset to start a new session.")
 
 # --- Reset Button ---
