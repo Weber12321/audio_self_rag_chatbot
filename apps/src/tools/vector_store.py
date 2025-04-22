@@ -91,7 +91,7 @@ def retrieve(query: str) -> Union[List[str] | str]:
     vectorstore = FAISS.load_local(
         os.path.join(
             os.getenv("VECTORSTORE_PATH", "fixtures/vector_db"),
-            RedisHandler.get_current_key,
+            RedisHandler.get_current_key(),
         ),
         create_google_embedding(),
         allow_dangerous_deserialization=True,

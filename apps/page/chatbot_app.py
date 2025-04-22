@@ -326,9 +326,70 @@ if st.session_state.timer_running:
                     )
                     st.rerun()
 
-    if st.session_state.timer_running:
-        time.sleep(1)
-        st.rerun()
+    # Sidebar content - always show certain elements
+    with st.sidebar:
+
+        # Show reset task section when timer is running
+        st.header("機器人簡述")
+        st.info(
+            """
+這個機器人專門根據情境以及對應的文檔做查詢以及回覆，請您和它對話。    
+對話結束後它會給予您一些回饋，幫助您成長。
+            """
+        )
+
+        st.header("機器人功能")
+        st.markdown(
+            """
+            ✉️ 建立情境     
+            🔍 向量查詢與問題改寫     
+            ☑️ 相關性驗證     
+            ✒️ 對話內容評估   
+            """
+        )
+        st.header("重置任務")
+        st.info("按下重置按鈕將會清除所有對話紀錄，並重新開始新的對話。")
+        if st.button("重置任務按鈕", type="primary", key="config_reset_button"):
+            logger.info("User clicked Reset Session button")
+            reset_app()
+
+        if st.session_state.timer_running:
+            time.sleep(1)
+            st.rerun()
+
+else:
+    # Only show this sidebar content when timer is not running
+    with st.sidebar:
+        st.header("機器人簡述")
+        st.info(
+            """
+這個機器人專門根據情境以及對應的文檔做查詢以及回覆，請您和它對話。    
+對話結束後它會給予您一些回饋，幫助您成長。
+            """
+        )
+
+        st.header("機器人功能")
+        st.markdown(
+            """
+            ✉️ 建立情境     
+            🔍 向量查詢與問題改寫     
+            ☑️ 相關性驗證     
+            ✒️ 對話內容評估   
+            """
+        )
+
+        st.session_state.scenarios_key = st.selectbox(
+            "情境選擇",
+            options=redis_scenario_handler.get_all_keys(),
+            index=0,
+        )
+
+        st.session_state.vector_search_key = st.selectbox(
+            "知識庫選擇",
+            options=redis_vector_search_handler.get_all_keys(),
+            index=0,
+        )
+        RedisHandler.set_current_key(st.session_state.vector_search_key)
 
 
 # --- Time's Up Phase ---
@@ -364,55 +425,3 @@ if st.session_state.time_up:
                     st.markdown(message["content"])
 
     st.info("Click Reset to start a new session.")
-
-
-with st.sidebar:
-    st.header("機器人簡述")
-    st.info(
-        """
-這個機器人專門根據情境以及對應的文檔做查詢以及回覆，請您和它對話。    
-對話結束後它會給予您一些回饋，幫助您成長。
-    """
-    )
-
-    st.header("機器人功能")
-    st.markdown(
-        """
-        ✉️ 建立情境     
-        🔍 向量查詢與問題改寫     
-        ☑️ 相關性驗證     
-        ✒️ 對話內容評估   
-        """
-    )
-
-    st.header("選擇情境")
-    st.info("選擇任務情境，並開始對話。")
-    st.session_state.scenarios_key = st.selectbox(
-        "情境選擇",
-        options=redis_scenario_handler.get_all_keys(),
-        index=0,
-    )
-
-    st.header("選擇知識庫")
-    st.info("選擇知識庫，並開始對話。")
-    st.session_state.vector_search_key = st.selectbox(
-        "知識庫選擇",
-        options=redis_vector_search_handler.get_all_keys(),
-        index=0,
-    )
-    RedisHandler.set_current_key(
-        st.session_state.vector_search_key
-    )  # Set the current key for vector search
-    st.warning(
-        f"請注意，知識庫的內容會影響機器人的回答，目前知識庫 {st.session_state.vector_search_key}"
-    )  # Add a warning about the knowledge base content
-
-    # --- Reset Button ---
-    # Make sure this is OUTSIDE the main timer running/time up blocks if you want it always visible after start
-    if st.session_state.start_time is not None:
-        st.header("重置任務")
-        st.info("按下重置按鈕將會清除所有對話紀錄，並重新開始新的對話。")
-        # Add a key to the reset button
-        if st.button("重置任務按鈕", type="primary", key="config_reset_button"):
-            logger.info("User clicked Reset Session button")
-            reset_app()

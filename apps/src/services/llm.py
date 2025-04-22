@@ -131,5 +131,5 @@ class EvalLLMService:
         """
         Build the agent with the given chat history and scenarios description.
         """
-
-        return self.system_prompt | self.llm | StrOutputParser()
+        prompt_template = PromptTemplate.from_template(self.system_prompt)
+        return prompt_template | self.llm | StrOutputParser()

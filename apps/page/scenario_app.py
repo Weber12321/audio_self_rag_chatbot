@@ -6,7 +6,7 @@ import redis
 
 # Initialize Redis connection
 @st.cache_resource
-def get_redis_connection():
+def get_redis_scenarios_connection():
     try:
         r = redis.Redis(
             host=os.getenv("REDIS_HOST", "localhost"),
@@ -20,18 +20,11 @@ def get_redis_connection():
         return None
 
 
-redis_handler = RedisHandler(get_redis_connection())
+redis_handler = RedisHandler(get_redis_scenarios_connection())
 
 
 def main():
     st.title("任務情境管理")
-
-    # Initialize Redis connection
-    redis_conn = get_redis_connection()
-
-    if not redis_conn:
-        st.error("Redis connection failed. Please check your Redis server.")
-        return
 
     # Create tabs for different operations
     create_tab, manage_tab = st.tabs(["新增情境", "管理現有情境"])
@@ -43,22 +36,18 @@ def main():
         # Input for new scenario
         new_title = st.text_input("情境標題（不可重複）", key="new_title")
 
-        if new_title in redis_handler.get_all_keys():
-            st.warning("情境標題已存在，請使用其他標題。")
-        else:
-            new_description = st.text_area(
-                "情境內容", key="new_description", height=600
-            )
+        new_description = st.text_area("情境內容", key="new_description", height=600)
 
-            if st.button("新增情境", type="primary"):
-                if new_title and new_description:
-                    if redis_handler.set_value(new_title, new_description):
-                        st.success(f"情境 '{new_title}' 新增成功！")
-                        # Clear inputs after successful addition
-                    else:
-                        st.error("新增情境失敗。")
+        if st.button("新增情境", type="primary"):
+            if new_title and new_description:
+                redis_handler.set_value(new_title, new_description)
+                if redis_handler.get_value(new_title) == new_description:
+                    st.success(f"情境 '{new_title}' 新增成功！")
+                    # Clear inputs after successful addition
                 else:
-                    st.warning("標題和內容都是必填的。")
+                    st.error("新增情境失敗。")
+            else:
+                st.warning("標題和內容都是必填的。")
 
     # Tab 2: Manage existing scenarios
     with manage_tab:

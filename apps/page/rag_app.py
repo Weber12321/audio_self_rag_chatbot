@@ -15,14 +15,13 @@ from apps.src.tools.vector_store import (
 st.set_page_config(page_title="PDF RAG System", page_icon="📚", layout="wide")
 
 
-# Initialize Redis connection
 @st.cache_resource
-def get_redis_connection():
+def get_redis_vector_search_connection():
     try:
         r = redis.Redis(
             host=os.getenv("REDIS_HOST", "localhost"),
             port=6379,
-            db=1,  # for vector store key saving
+            db=1,
             decode_responses=True,  # Automatically decode response bytes to strings
         )
         return r
@@ -36,7 +35,7 @@ def main():
     st.write("上傳 PDF 文件並使用查詢系統進行查詢。")
 
     # redis handler
-    redis_handler = RedisHandler(redis_connection=get_redis_connection())
+    redis_handler = RedisHandler(redis_connection=get_redis_vector_search_connection())
     # Create tabs for different functionalities
     tab1, tab2 = st.tabs(["建立向量資料庫", "向量查詢系統"])
 
@@ -49,9 +48,6 @@ def main():
         )
 
         name_of_db = st.text_input("Enter a name for the vector database")
-        if name_of_db in redis_handler.get_all_keys():
-            st.warning("⚠️ Database name already exists. Please use a different name.")
-            st.stop()
 
         if uploaded_files:
             st.write(f"📄 {len(uploaded_files)} files uploaded")
@@ -79,13 +75,6 @@ def main():
 
     with tab2:
         st.header("向量查詢")
-
-        # Check if vector store exists
-        if not check_directory_exists():
-            st.warning(
-                "⚠️ No vector database found. Please create one first in the 'Create Vector DB' tab."
-            )
-            st.stop()
 
         # Select existing vector database
         db_name = st.selectbox(

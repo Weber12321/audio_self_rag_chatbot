@@ -16,7 +16,9 @@ def create_scenarios_supervisor_prompt(scenarios_description):
     """
     Create a prompt for the supervisor agent based on the provided scenario description.
     """
-    return SUPERVISOR_PROMPT.format(scenarios=scenarios_description)
+    return SUPERVISOR_PROMPT.format(
+        scenarios=scenarios_description, chat_history="{chat_history}"
+    )
 
 
 def create_query_rewrite_prompt(scenarios_description):

@@ -39,7 +39,7 @@ class SupervisorAgent:
         workflow.add_edge("evaluate", END)
         workflow.set_entry_point("evaluate")
 
-        return workflow
+        return workflow.compile()
 
     def evaluate(self, state: SupervisorState) -> SupervisorState:
         """Evaluate the chat history with the given scenarios."""
