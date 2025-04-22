@@ -1,4 +1,5 @@
 import os
+from src.utils.redis_handler import RedisHandler
 import streamlit as st
 import redis
 
@@ -19,29 +20,7 @@ def get_redis_connection():
         return None
 
 
-# Redis operations
-def get_all_keys(r):
-    if r:
-        return r.keys("*")
-    return []
-
-
-def get_value(r, key):
-    if r:
-        return r.get(key)
-    return None
-
-
-def set_value(r, key, value):
-    if r and key and value:
-        return r.set(key, value)
-    return False
-
-
-def delete_key(r, key):
-    if r and key:
-        return r.delete(key)
-    return 0
+redis_handler = RedisHandler(get_redis_connection())
 
 
 def main():
@@ -64,7 +43,7 @@ def main():
         # Input for new scenario
         new_title = st.text_input("情境標題（不可重複）", key="new_title")
 
-        if new_title in get_all_keys(redis_conn):
+        if new_title in redis_handler.get_all_keys():
             st.warning("情境標題已存在，請使用其他標題。")
         else:
             new_description = st.text_area(
@@ -73,11 +52,9 @@ def main():
 
             if st.button("新增情境", type="primary"):
                 if new_title and new_description:
-                    if set_value(redis_conn, new_title, new_description):
+                    if redis_handler.set_value(new_title, new_description):
                         st.success(f"情境 '{new_title}' 新增成功！")
                         # Clear inputs after successful addition
-                        st.session_state.new_title = ""
-                        st.session_state.new_description = ""
                     else:
                         st.error("新增情境失敗。")
                 else:
@@ -88,7 +65,7 @@ def main():
         st.header("管理現有情境")
 
         # Get all scenario keys
-        all_keys = get_all_keys(redis_conn)
+        all_keys = redis_handler.get_all_keys()
 
         if not all_keys:
             st.info("尚未找到任何情境。請先在「新增情境」標籤下添加情境。")
@@ -96,7 +73,7 @@ def main():
             selected_key = st.selectbox("選擇情境", all_keys)
 
             if selected_key:
-                current_value = get_value(redis_conn, selected_key)
+                current_value = redis_handler.get_value(selected_key)
 
                 st.subheader("目前情境詳細資料")
                 st.text(f"標題: {selected_key}")
@@ -104,7 +81,7 @@ def main():
                     "內容",
                     value=current_value,
                     key="current_description",
-                    height=150,
+                    height=600,
                 )
 
                 col1, col2 = st.columns(2)
@@ -113,14 +90,14 @@ def main():
                     if st.button("更新情境"):
                         new_value = st.session_state.current_description
                         if new_value != current_value:
-                            if set_value(redis_conn, selected_key, new_value):
+                            if redis_handler.set_value(selected_key, new_value):
                                 st.success(f"情境 '{selected_key}' 更新成功！")
                             else:
                                 st.error("更新情境失敗。")
 
                 with col2:
                     if st.button("刪除情境", type="primary", use_container_width=True):
-                        if delete_key(redis_conn, selected_key):
+                        if redis_handler.delete_key(selected_key):
                             st.success(f"情境 '{selected_key}' 刪除成功！")
                             st.rerun()  # Refresh the page to update the list
                         else:

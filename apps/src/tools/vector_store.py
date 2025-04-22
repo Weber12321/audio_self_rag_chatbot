@@ -1,15 +1,15 @@
 import logging
 import os
-from src.tools.models import create_google_embedding, create_google_model
+from src.utils.redis_handler import RedisHandler
+from src.tools.models import create_google_embedding
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_community.vectorstores import FAISS
 from langchain_core.tools import tool
 from typing import List, Union
 from langchain_community.document_loaders import PyPDFLoader
-from io import BytesIO
 
 
-def check_directory_exists() -> bool:
+def check_directory_exists(key: str) -> bool:
     """Check if a directory exists.
 
     Args:
@@ -20,12 +20,12 @@ def check_directory_exists() -> bool:
     """
     directory = os.getenv("VECTORSTORE_PATH", "fixtures/vector_db")
 
-    return os.path.exists(directory)
+    return os.path.exists(os.path.join(directory, key))
 
 
-def create_index_with_file_objects(file_objects):
+def create_index_with_file_objects(key, file_objects):
     """Use FAISS and langchain to create an index for the vector store."""
-    if check_directory_exists():
+    if check_directory_exists(key):
         print("Directory already exists. Exiting...")
         return
     logging.info("Creating index with file objects...")
@@ -40,8 +40,6 @@ def create_index_with_file_objects(file_objects):
     for file_obj in file_objects:
         # Handle PDF files using PyPDFLoader
         if hasattr(file_obj, "name") and file_obj.name.lower().endswith(".pdf"):
-            # Convert streamlit uploaded file to bytes
-            pdf_bytes = BytesIO(file_obj.getvalue())
 
             # Save temporarily to use with PyPDFLoader
             temp_path = f"temp_{file_obj.name}"
@@ -71,7 +69,8 @@ def create_index_with_file_objects(file_objects):
     vector_store = FAISS.from_documents(all_splits, embeddings_function)
 
     # Save the vector store locally
-    save_path = os.getenv("VECTORSTORE_PATH", "fixtures/vector_db")
+    save_path = os.path.join(os.getenv("VECTORSTORE_PATH", "fixtures/vector_db"), key)
+
     vector_store.save_local(save_path)
     print(f"Vector store saved to {save_path}")
 
@@ -84,8 +83,16 @@ def retrieve(query: str) -> Union[List[str] | str]:
     Returns:
         List[str]: A list of relevant document contents.
     """
+    if RedisHandler.get_current_key is None:
+        raise ValueError(
+            "No vector store key found. Please create a vector store first."
+        )
+
     vectorstore = FAISS.load_local(
-        os.getenv("VECTORSTORE_PATH", "fixtures/vector_db"),
+        os.path.join(
+            os.getenv("VECTORSTORE_PATH", "fixtures/vector_db"),
+            RedisHandler.get_current_key,
+        ),
         create_google_embedding(),
         allow_dangerous_deserialization=True,
     )

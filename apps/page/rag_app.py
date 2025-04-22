@@ -1,5 +1,7 @@
+from src.utils.redis_handler import RedisHandler
 import streamlit as st
 import os
+import redis
 import sys
 
 # Add the project root to the path to import from apps.backend
@@ -13,27 +15,43 @@ from apps.src.tools.vector_store import (
 st.set_page_config(page_title="PDF RAG System", page_icon="📚", layout="wide")
 
 
-def main():
-    st.title("📚 PDF RAG System")
-    st.write(
-        "Upload PDFs to create a vector database, then ask questions about your documents."
-    )
+# Initialize Redis connection
+@st.cache_resource
+def get_redis_connection():
+    try:
+        r = redis.Redis(
+            host=os.getenv("REDIS_HOST", "localhost"),
+            port=6379,
+            db=1,  # for vector store key saving
+            decode_responses=True,  # Automatically decode response bytes to strings
+        )
+        return r
+    except Exception as e:
+        st.error(f"Failed to connect to Redis: {e}")
+        return None
 
+
+def main():
+    st.title("📚 文件管理系統")
+    st.write("上傳 PDF 文件並使用查詢系統進行查詢。")
+
+    # redis handler
+    redis_handler = RedisHandler(redis_connection=get_redis_connection())
     # Create tabs for different functionalities
-    tab1, tab2 = st.tabs(["Create Vector DB", "Query Documents"])
+    tab1, tab2 = st.tabs(["建立向量資料庫", "向量查詢系統"])
 
     with tab1:
-        st.header("Create Vector Database")
-
-        # Check if vector store already exists
-        vector_store_exists = check_directory_exists()
-        if vector_store_exists:
-            st.warning("⚠️ Vector database already exists. You can query it directly.")
+        st.header("創建向量資料庫")
 
         # File uploader for multiple PDF files
         uploaded_files = st.file_uploader(
             "Upload PDF documents", type=["pdf"], accept_multiple_files=True
         )
+
+        name_of_db = st.text_input("Enter a name for the vector database")
+        if name_of_db in redis_handler.get_all_keys():
+            st.warning("⚠️ Database name already exists. Please use a different name.")
+            st.stop()
 
         if uploaded_files:
             st.write(f"📄 {len(uploaded_files)} files uploaded")
@@ -44,14 +62,15 @@ def main():
 
         # Button to create vector database
         if st.button(
-            "Create Vector Database", disabled=vector_store_exists or not uploaded_files
+            "Create Vector Database", disabled=not uploaded_files or not name_of_db
         ):
             with st.spinner(
                 "Creating vector database... This may take a while depending on the number and size of documents."
             ):
                 try:
                     # Process the uploaded files
-                    create_index_with_file_objects(uploaded_files)
+                    create_index_with_file_objects(name_of_db, uploaded_files)
+                    redis_handler.set_value(name_of_db, name_of_db)
                     st.success("✅ Vector database created successfully!")
                     # Force refresh to update vector_store_exists status
                     st.rerun()
@@ -59,7 +78,7 @@ def main():
                     st.error(f"❌ Error creating vector database: {str(e)}")
 
     with tab2:
-        st.header("Query Your Documents")
+        st.header("向量查詢")
 
         # Check if vector store exists
         if not check_directory_exists():
@@ -68,6 +87,11 @@ def main():
             )
             st.stop()
 
+        # Select existing vector database
+        db_name = st.selectbox(
+            "Select an existing vector database", redis_handler.get_all_keys()
+        )
+        RedisHandler.set_current_key(db_name)
         # Text area for query input
         query = st.text_area("Enter your question about the documents:", height=100)
 

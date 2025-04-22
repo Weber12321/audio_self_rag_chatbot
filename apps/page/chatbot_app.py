@@ -1,5 +1,6 @@
 import os
 import time
+from src.utils.redis_handler import RedisHandler
 import redis
 from typing import Dict, List
 
@@ -30,7 +31,7 @@ def get_redis_connection():
         return None
 
 
-redis_conn = get_redis_connection()
+redis_handler = RedisHandler(get_redis_connection())
 
 
 def get_all_keys(r):
@@ -137,8 +138,8 @@ def start_chat_session():
                 st.stop()
                 return
 
-            scenarios_description = get_value(
-                redis_conn, st.session_state.scenarios_key
+            scenarios_description = redis_handler.get_value(
+                st.session_state.scenarios_key
             )
 
             st.session_state.langchain_chat = SelfRAGWorkflow(
@@ -370,9 +371,13 @@ with st.sidebar:
     st.info("選擇任務情境，並開始對話。")
     st.session_state.scenarios_key = st.selectbox(
         "情境選擇",
-        options=get_all_keys(redis_conn),
+        options=redis_handler.get_all_keys(),
         index=0,
     )
+
+    st.header("選擇知識庫")
+    st.info("選擇知識庫，並開始對話。")
+
     # --- Reset Button ---
     # Make sure this is OUTSIDE the main timer running/time up blocks if you want it always visible after start
     if st.session_state.start_time is not None:
