@@ -10,7 +10,7 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 
 from backend.tools.prompts import (
     create_query_rewrite_prompt,
-    create_senario_retrivel_prompt,
+    create_scenarios_retrivel_prompt,
 )
 from backend.services.prompts import *
 from backend.tools.models import create_google_model
@@ -34,15 +34,15 @@ class ResponseGrader(BaseModel):
 
 
 class RAGLLMService:
-    def __init__(self, session_id: str = None, senario_description: str = None):
+    def __init__(self, session_id: str = None, scenarios_description: str = None):
         """Initialize the LLM service with Open AI"""
-        if not senario_description:
-            senario_description = ""
+        if not scenarios_description:
+            scenarios_description = ""
 
-        self.retrieval_system_prompt = create_senario_retrivel_prompt(
-            senario_description
+        self.retrieval_system_prompt = create_scenarios_retrivel_prompt(
+            scenarios_description
         )
-        self.query_rewrite_prompt = create_query_rewrite_prompt(senario_description)
+        self.query_rewrite_prompt = create_query_rewrite_prompt(scenarios_description)
         if not session_id:
             session_id = str(uuid.uuid4())
         self.memory = InMemoryChatMessageHistory(session_id=session_id)

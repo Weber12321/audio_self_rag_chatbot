@@ -1,6 +1,6 @@
 import logging
 import os
-from apps.backend.tools.models import create_google_embedding, create_google_model
+from backend.tools.models import create_google_embedding, create_google_model
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_community.vectorstores import FAISS
 from langchain_core.tools import tool

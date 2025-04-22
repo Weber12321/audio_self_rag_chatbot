@@ -9,11 +9,11 @@ from backend.services.llm import RAGLLMService
 
 if __name__ == "__main__":
 
-    senario_description = """<input your scenario description here>"""
+    scenarios_description = """<input your scenario description here>"""
 
     # Initialize RAGLLMService
     rag_llm_service = RAGLLMService(
-        session_id="test_session", senario_description=senario_description
+        session_id="test_session", scenarios_description=scenarios_description
     )
 
     # Example query

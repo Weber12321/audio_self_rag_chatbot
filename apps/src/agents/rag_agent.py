@@ -23,16 +23,16 @@ class SelfRAGWorkflow:
         query_rewritten: bool = False  # Whether query was rewritten
         rewritten_query: str = ""  # Rewritten query if any
 
-    def __init__(self, session_id: str = None, senario_description: str = None):
+    def __init__(self, session_id: str = None, scenarios_description: str = None):
         """Initialize the Self-RAG workflow with Open AI"""
-        if not senario_description:
-            senario_description = ""
+        if not scenarios_description:
+            scenarios_description = ""
         self.session_id = session_id
         if not session_id:
             session_id = str(uuid.uuid4())
 
         self.llm_service = RAGLLMService(
-            session_id=session_id, senario_description=senario_description
+            session_id=session_id, scenarios_description=scenarios_description
         )
 
         self.workflow = self._build_workflow()

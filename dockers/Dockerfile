@@ -13,12 +13,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY apps/backend/requirements.txt backend_requirements.txt
-COPY apps/frontend/requirements.txt frontend_requirements.txt
+COPY apps/requirements.txt requirements.txt
 
 # Install dependencies
-RUN pip install --no-cache-dir -r backend_requirements.txt && \
-    pip install --no-cache-dir -r frontend_requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt 
 
 # Copy application code
 COPY . .

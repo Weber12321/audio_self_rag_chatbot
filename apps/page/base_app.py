@@ -2,7 +2,6 @@ import os
 import streamlit as st
 import google.generativeai as genai
 import asyncio
-from streamlit.runtime.scriptrunner import add_script_run_ctx
 
 
 api_key = os.getenv("GOOGLE_API_KEY", "")

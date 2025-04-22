@@ -1,7 +1,7 @@
 RETRIEVAL_SYSTEM_PROMPT = """
 你是一個組織內 RAG 助理，需要判斷使用者的輸入是否符合內部文件內容，目前內部文件包含了平台手冊的資訊，這些資訊包含以下：
 
-{senario}
+{scenarios}
 
 + 如果使用者試圖想要透過詢問問題了解以上資訊，則調用工具 retrieve 透過檢索向量資料庫 retriever，並回傳結果。
 + 如果使用者根據你的回答持續追問，請認真的使用 retrieve 透過檢索向量資料庫 retriever，並回傳結果。
@@ -54,5 +54,5 @@ Answer:
 QUERY_REWRITE_PROMPT = """
 你是一個問題改寫的助理，請參考以下文檔內容，並針對使用者輸入的問題進行改寫。請注意改寫的問題不可以完全偏離原本問題的語意。
 
-{senario}
+{scenarios}
 """

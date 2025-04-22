@@ -1,20 +1,6 @@
 import os
 import streamlit as st
 import time
-import sys
-
-
-# Add path to import backend modules
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-)
-
-# Import Langchain components
-# from langchain.chains import ConversationChain
-# from langchain.memory import ConversationBufferMemory
-# from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-# from langchain.schema import SystemMessage, HumanMessage
-
 from backend.agents.rag_agent import SelfRAGWorkflow
 
 
@@ -105,7 +91,7 @@ def start_chat_session():
             # )
             st.session_state.langchain_chat = SelfRAGWorkflow(
                 session_id=st.session_state.chat_session_id,
-                senario_description="""
+                scenarios_description="""
 文件目的與適用範圍
 
 目的： [9] 本手冊旨在規範船隊電腦（含 IT 及 OT 算貨電腦）發生病毒或惡意程式威脅事件時的標準處理流程，由機房同仁（依時段可能是系統管理部系統服務課 SSV 或 UHD）通知相關人員（船長、SSV 船隊防毒軟體管理人員、海技部），進行檢查與處理，以阻止惡意軟體攻擊及擴散，確保船隊資訊安全。

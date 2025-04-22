@@ -22,14 +22,14 @@ pages = {
         #     icon="🤖",
         # ),
         st.Page(
-            "develop/chatbot_app.py",
+            "chatbot_app.py",
             title="倒數計時文字聊天室",
             icon="🤖",
         ),
     ],
     "機器人服務": [
         st.Page(
-            "develop/rag_app.py",
+            "rag_app.py",
             title="PDF RAG 系統",
             icon="📊",
         ),

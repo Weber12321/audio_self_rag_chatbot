@@ -7,3 +7,4 @@ langgraph
 pydantic
 google-genai
 pypdf
+streamlit==1.44.1
