@@ -1,22 +1,40 @@
 import os
+from typing import Dict, List
 import streamlit as st
 import time
+from langchain_core.messages import HumanMessage, AIMessage
 from src.agents.rag_agent import SelfRAGWorkflow
+from src.utils.log_handler import setup_logger
 
+# Initialize logger
+logger = setup_logger(__name__)
 
 api_key = os.getenv("GOOGLE_API_KEY", "")
 # Configure API
 if not api_key:
+    logger.error("GOOGLE_API_KEY not found in environment variables")
     st.error(
         "🚨 GOOGLE_API_KEY not found in st.secrets! Please add it to your .env file."
     )
     st.stop()
 
 
+def convert_to_langchain_messages(messages: List[Dict]) -> List:
+    """Convert the session state messages to langchain message objects"""
+    lc_messages = []
+    for message in messages:
+        if message["role"] == "user":
+            lc_messages.append(HumanMessage(content=message["content"]))
+        elif message["role"] == "assistant":
+            lc_messages.append(AIMessage(content=message["content"]))
+    return lc_messages
+
+
 # --- Initialization & API Key Configuration ---
 def initialize_session_state():
     """Initializes session state variables if they don't exist."""
     if "initialized" not in st.session_state:
+        logger.info("Initializing session state variables")
         st.session_state.initialized = True
         st.session_state.timer_duration_minutes = 5
         st.session_state.timer_running = False
@@ -42,6 +60,7 @@ def format_time(seconds):
 
 
 def reset_app():
+    logger.info("Resetting application state")
     st.session_state.timer_running = False
     st.session_state.start_time = None
     st.session_state.duration_seconds = 0
@@ -57,6 +76,9 @@ def reset_app():
 
 def start_chat_session():
     if st.session_state.timer_duration_minutes > 0:
+        logger.info(
+            f"Starting new chat session with {st.session_state.timer_duration_minutes} minute duration"
+        )
         st.session_state.timer_running = True
         st.session_state.time_up = False
         st.session_state.warning_sent = False
@@ -89,6 +111,9 @@ def start_chat_session():
             # st.session_state.langchain_chat = ConversationChain(
             #     llm=llm, memory=memory, prompt=prompt, verbose=True
             # )
+            logger.info(
+                f"Initializing SelfRAGWorkflow for session: {st.session_state.chat_session_id}"
+            )
             st.session_state.langchain_chat = SelfRAGWorkflow(
                 session_id=st.session_state.chat_session_id,
                 scenarios_description="""
@@ -158,7 +183,7 @@ USB 來源： 路徑非 C:\ 或 D:\ 開頭。
 總結：
 這份手冊提供了一套結構化的流程來應對船隊電腦病毒事件。關鍵在於區分處理時段、判斷船隻類型與 ESIS 建置狀況、識別病毒來源（特別是對於未建置 ESIS 的船隻），並根據不同情況採取相應的通知和處置措施，最後確保事件得到追蹤與適當的升級處理。
 """,
-            ).workflow
+            )
 
             st.session_state.messages = [
                 {
@@ -168,9 +193,13 @@ USB 來源： 路徑非 C:\ 或 D:\ 開頭。
             ]
             st.rerun()
         except Exception as e:
+            logger.error(
+                f"Failed to initialize Langchain chat model: {str(e)}", exc_info=True
+            )
             st.error(f"Failed to initialize Langchain chat model: {e}")
             st.session_state.timer_running = False
     else:
+        logger.warning("User attempted to start session with duration <= 0 minutes")
         st.error("Please set a duration greater than 0 minutes.")
 
 
@@ -206,6 +235,9 @@ if not st.session_state.timer_running and not st.session_state.time_up:
         )
         # Important: Update session state if the value changes
         if new_duration != current_duration:
+            logger.info(
+                f"Chat duration changed from {current_duration} to {new_duration} minutes"
+            )
             st.session_state.timer_duration_minutes = new_duration
             st.rerun()  # Rerun if duration changes to reflect it immediately
 
@@ -235,10 +267,12 @@ if st.session_state.timer_running:
     quarter_time_threshold = st.session_state.duration_seconds * 0.25
     if remaining_time <= quarter_time_threshold and not st.session_state.warning_sent:
         warning_minutes = round(quarter_time_threshold / 60, 1)
+        logger.info(f"Time warning: less than {warning_minutes} minutes remaining")
         st.warning(f"⏳ Time remaining is less than {warning_minutes} minutes!")
         st.session_state.warning_sent = True
 
     if remaining_time <= 0:
+        logger.info("Time's up for chat session")
         st.session_state.timer_running = False
         st.session_state.time_up = True
         timer_display_placeholder.metric("Time Remaining", "00:00")
@@ -264,14 +298,26 @@ if st.session_state.timer_running:
 
         if st.session_state.timer_running and st.session_state.langchain_chat:
             if prompt := st.chat_input("Ask a question...", key="chat_input_main"):
+                logger.info(
+                    f"User sent message: {prompt[:50]}{'...' if len(prompt) > 50 else ''}"
+                )
                 st.session_state.messages.append({"role": "user", "content": prompt})
                 try:
                     # Use Langchain for chat response
-                    response = st.session_state.langchain_chat.invoke({"query": prompt})
+                    logger.debug("Invoking LangChain workflow")
+                    response = st.session_state.langchain_chat.workflow.invoke(
+                        {"query": prompt}
+                    )
                     assistant_response = response
+                    logger.info(
+                        f"Generated response: {assistant_response[:50]}{'...' if len(assistant_response) > 50 else ''}"
+                    )
                 except Exception as e:
+                    logger.error(f"Error generating response: {str(e)}", exc_info=True)
                     st.error(f"An error occurred while processing your request: {e}")
-                    assistant_response = "Sorry, I couldn't generate a response."
+                    assistant_response = (
+                        f"Sorry, I couldn't generate a response due to {str(e)}"
+                    )
                 st.session_state.messages.append(
                     {"role": "assistant", "content": assistant_response}
                 )
@@ -307,4 +353,5 @@ if st.session_state.time_up:
 if st.session_state.start_time is not None or st.session_state.time_up:
     # Add a key to the reset button
     if st.button("Reset Session", key="config_reset_button"):
+        logger.info("User clicked Reset Session button")
         reset_app()

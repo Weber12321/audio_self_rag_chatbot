@@ -12,7 +12,6 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger("frontend")
-logger.info("Starting application")
 
 pages = {
     "聊天室": [
