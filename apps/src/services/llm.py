@@ -8,13 +8,13 @@ from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 
-from backend.tools.prompts import (
+from src.tools.prompts import (
     create_query_rewrite_prompt,
     create_scenarios_retrivel_prompt,
 )
-from backend.services.prompts import *
-from backend.tools.models import create_google_model
-from backend.tools.vector_store import retrieve
+from src.services.prompts import *
+from src.tools.models import create_google_model
+from src.tools.vector_store import retrieve
 
 
 class DocumentGrader(BaseModel):

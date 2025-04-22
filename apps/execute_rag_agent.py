@@ -4,7 +4,7 @@ import os
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
 sys.path.append(project_root)
 
-from backend.services.llm import RAGLLMService
+from src.services.llm import RAGLLMService
 
 
 if __name__ == "__main__":

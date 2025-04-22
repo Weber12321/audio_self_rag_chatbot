@@ -1,4 +1,4 @@
-from backend.services.prompts import RETRIEVAL_SYSTEM_PROMPT, QUERY_REWRITE_PROMPT
+from src.services.prompts import RETRIEVAL_SYSTEM_PROMPT, QUERY_REWRITE_PROMPT
 
 
 def create_scenarios_retrivel_prompt(scenarios_description):

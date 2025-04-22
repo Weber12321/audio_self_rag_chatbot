@@ -4,7 +4,7 @@ import sys
 
 # Add the project root to the path to import from apps.backend
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
-from apps.backend.tools.vector_store import (
+from apps.src.tools.vector_store import (
     create_index_with_file_objects,
     retrieve,
     check_directory_exists,

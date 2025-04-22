@@ -3,7 +3,7 @@ from typing import operator, List, Sequence, Optional, TypedDict, Annotated
 import uuid
 
 from langchain_core.messages import BaseMessage, AIMessage
-from backend.services.llm import RAGLLMService
+from src.services.llm import RAGLLMService
 from langgraph.graph import StateGraph, END
 
 

@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 import time
-from backend.agents.rag_agent import SelfRAGWorkflow
+from src.agents.rag_agent import SelfRAGWorkflow
 
 
 api_key = os.getenv("GOOGLE_API_KEY", "")
