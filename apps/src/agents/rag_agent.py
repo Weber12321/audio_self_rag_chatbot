@@ -68,10 +68,10 @@ class SelfRAGWorkflow:
 
         return workflow.compile()
 
-    def retrieve_or_respond(self, state):
+    async def retrieve_or_respond(self, state):
         """An agent which decide to retrieve relevant documents based on the query or reply the LLM answer directly"""
         # Extract the query from the latest human message
-        response = self.llm_service.rag_agent.invoke(
+        response = await self.llm_service.rag_agent.ainvoke(
             {"query": state["messages"][-1].content},
             config={"configurable": {"session_id": self.session_id}},
         )
@@ -97,12 +97,12 @@ class SelfRAGWorkflow:
         validated_docs = []
 
         for doc in docs:
-            response = self.llm_service.document_validation_chain.invoke(
+            response = self.llm_service.document_validation_chain.ainvoke(
                 {"query": query, "document": doc}
-            ).binary_score
+            )
 
             # Check if document is validated as relevant
-            if response.strip().lower() == "true":
+            if response.binary_score.strip().lower() == "true":
                 validated_docs.append(doc)
 
         # Update the state with validated documents
@@ -133,7 +133,7 @@ class SelfRAGWorkflow:
         )
 
         # Update the state with the generated response
-        state["response"] = self.llm_service.rag_response_chain.invoke(
+        state["response"] = self.llm_service.rag_response_chain.ainvoke(
             {
                 "query": query,
                 "documents": docs_content,
@@ -146,15 +146,15 @@ class SelfRAGWorkflow:
         """Validate the generated response twice with LLM response and query"""
         query = state["messages"][-1].content
         response = state["response"]
-        response = self.llm_service.response_validation_chain.invoke(
+        response = self.llm_service.response_validation_chain.ainvoke(
             {
                 "query": query,
                 "response": response,
             }
-        ).binary_score
+        )
 
         # Consider the response valid only if both validations pass
-        if response.strip().lower() == "true":
+        if response.binary_score.strip().lower() == "true":
             state["response_validated"] = True
         else:
             state["response_validated"] = False
@@ -173,7 +173,7 @@ class SelfRAGWorkflow:
     def query_rewrite(self, state: SelfRAGState):
         """Rewrite the query if it failed in the previous stage"""
 
-        new_query = self.llm_service.query_rewrite_chain.invoke(
+        new_query = self.llm_service.query_rewrite_chain.ainvoke(
             {"query": state["messages"][-1].content}
         )
         new_query = (

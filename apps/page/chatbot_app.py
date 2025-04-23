@@ -187,6 +187,33 @@ def start_chat_session():
         st.error("Please set a duration greater than 0 minutes.")
 
 
+# async
+# TODO: it will cause error message for: Event loop is closed
+# async def call_agent(initial_state, agents):
+#     """Call the agent with the initial state"""
+#     state = await agents.workflow.ainvoke(initial_state)
+#     return state
+
+
+# async def ainvoke(initial_state, agents):
+#     # Create a task so it runs in the background
+#     agent_task = asyncio.create_task(
+#         call_agent(initial_state=initial_state, agents=agents)
+#     )
+
+#     # This will run immediately, not waiting for the task to complete
+#     print("print something while the workflow is running")
+
+#     # Now wait for the task to complete and get its result
+#     result = await agent_task
+
+#     if result:
+#         print("Async workflow execution finished")
+#         print(f"Result: {result}")
+
+#     return result
+
+
 # --- App Logic ---
 
 st.title("限時對話機器人")
