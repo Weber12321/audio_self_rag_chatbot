@@ -434,7 +434,7 @@ if st.session_state.timer_running:
         )
         st.header("重置任務")
         st.info("按下重置按鈕將會清除所有對話紀錄，並重新開始新的對話。")
-        if st.button("重置任務按鈕", type="primary", key="config_reset_button"):
+        if st.button("重置任務按鈕", type="primary"):
             logger.info("User clicked Reset Session button")
             reset_app()
 
@@ -516,6 +516,6 @@ if st.session_state.time_up:
                     st.markdown(message["content"])
 
     st.info("Click Reset to start a new session.")
-    if st.button("重置任務按鈕", type="primary", key="config_reset_button"):
+    if st.button("重置任務按鈕", type="primary"):
         logger.info("User clicked Reset Session button")
         reset_app()
