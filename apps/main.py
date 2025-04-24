@@ -14,12 +14,14 @@ logging.basicConfig(
 logger = logging.getLogger("frontend")
 
 pages = {
+    "首頁": [
+        st.Page(
+            "page/index.py",
+            title="首頁",
+            icon="🏠",
+        ),
+    ],
     "聊天室": [
-        # st.Page(
-        #     "develop/timer_app.py",
-        #     title="倒數計時語音聊天室",
-        #     icon="🤖",
-        # ),
         st.Page(
             "page/chatbot_app.py",
             title="倒數計時文字聊天室",

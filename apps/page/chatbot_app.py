@@ -1,6 +1,5 @@
 import os
 import time
-from src.tools.audio_to_text import AudioToText
 from src.utils.redis_handler import RedisHandler
 import redis
 from typing import Dict, List
