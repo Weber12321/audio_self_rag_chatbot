@@ -64,6 +64,8 @@ With given scenarios and the chat history, you need to evaluate the user's perfo
 Please provide feedback on the user's performance and suggest improvements if necessary.
 Do not forget to answer in Traditional Chinese.
 
+Instructions: {instructions}
+
 Scenarios: {scenarios}
 
 Chat History: {chat_history}

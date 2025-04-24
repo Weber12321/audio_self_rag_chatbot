@@ -12,12 +12,14 @@ def create_scenarios_retrivel_prompt(scenarios_description):
     return RETRIEVAL_SYSTEM_PROMPT.format(scenarios=scenarios_description)
 
 
-def create_scenarios_supervisor_prompt(scenarios_description):
+def create_scenarios_supervisor_prompt(scenarios_description, instructions):
     """
     Create a prompt for the supervisor agent based on the provided scenario description.
     """
     return SUPERVISOR_PROMPT.format(
-        scenarios=scenarios_description, chat_history="{chat_history}"
+        scenarios=scenarios_description,
+        instructions=instructions,
+        chat_history="{chat_history}",
     )
 
 

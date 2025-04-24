@@ -39,6 +39,11 @@ pages = {
             title="情境管理系統",
             icon="📊",
         ),
+        st.Page(
+            "page/supervisor_app.py",
+            title="回饋管理系統",
+            icon="📊",
+        ),
     ],
 }
 

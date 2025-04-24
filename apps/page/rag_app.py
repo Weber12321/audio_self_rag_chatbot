@@ -9,7 +9,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 from apps.src.tools.vector_store import (
     create_index_with_file_objects,
     retrieve,
-    check_directory_exists,
 )
 
 st.set_page_config(page_title="PDF RAG System", page_icon="📚", layout="wide")

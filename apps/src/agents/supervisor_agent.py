@@ -16,14 +16,17 @@ class SupervisorAgent:
         chat_history: List[BaseMessage]
         feedback: str
 
-    def __init__(self, scenarios_description: str = None):
+    def __init__(
+        self, scenarios_description: str = None, supervisor_instructions: str = None
+    ):
         """Initialize the Supervisor agent with Open AI"""
         if not scenarios_description:
             scenarios_description = ""
 
         self.scenarios_description = scenarios_description
         self.llm_service = EvalLLMService(
-            scenarios_description=self.scenarios_description
+            scenarios_description=self.scenarios_description,
+            supervisor_instructions=supervisor_instructions,
         )
         self.workflow = self._build_workflow()
 

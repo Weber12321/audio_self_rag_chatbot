@@ -5,6 +5,7 @@ class RedisHandler:
 
     # Class attribute shared by all instances
     current_retrieval_key = None
+    current_supervisor_key = None
 
     def __init__(self, redis_connection: Redis):
         self.redis_client = redis_connection

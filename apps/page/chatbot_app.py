@@ -67,8 +67,24 @@ def get_redis_vector_search_connection():
         return None
 
 
+@st.cache_resource
+def get_redis_superviser_connection():
+    try:
+        r = redis.Redis(
+            host=os.getenv("REDIS_HOST", "localhost"),
+            port=6379,
+            db=2,
+            decode_responses=True,  # Automatically decode response bytes to strings
+        )
+        return r
+    except Exception as e:
+        st.error(f"Failed to connect to Redis: {e}")
+        return None
+
+
 redis_scenario_handler = RedisHandler(get_redis_scenarios_connection())
 redis_vector_search_handler = RedisHandler(get_redis_vector_search_connection())
+redis_supervisor_handler = RedisHandler(get_redis_superviser_connection())
 
 
 def get_all_keys(r):
@@ -121,6 +137,7 @@ def initialize_session_state():
         st.session_state.supervisor_agent = None
         st.session_state.chat_session_id = None
         st.session_state.scenarios_key = None
+        st.session_state.supervisor_key = None
         st.session_state.vector_search_key = None
         st.session_state.last_audio = None
         st.session_state.last_text = None
@@ -150,6 +167,7 @@ def reset_app():
     st.session_state.supervisor_agent = None
     st.session_state.chat_session_id = None
     st.session_state.scenarios_key = None
+    st.session_state.supervisor_key = None
     st.session_state.vector_search_key = None
     st.session_state.last_audio = None
     st.session_state.last_text = None
@@ -181,8 +199,17 @@ def start_chat_session():
                 st.stop()
                 return
 
+            if st.session_state.supervisor_key is None:
+                st.error("Please select a supervisor key before starting the session.")
+                st.stop()
+                return
+
             scenarios_description = redis_scenario_handler.get_value(
                 st.session_state.scenarios_key
+            )
+
+            supervisor_instructions = redis_supervisor_handler.get_value(
+                st.session_state.supervisor_key
             )
 
             st.session_state.langchain_chat = SelfRAGWorkflow(
@@ -191,7 +218,8 @@ def start_chat_session():
             )
 
             st.session_state.supervisor_agent = SupervisorAgent(
-                scenarios_description=scenarios_description
+                scenarios_description=scenarios_description,
+                supervisor_instructions=supervisor_instructions,
             )
 
             st.session_state.messages = [
@@ -438,6 +466,12 @@ else:
         st.session_state.scenarios_key = st.selectbox(
             "情境選擇",
             options=redis_scenario_handler.get_all_keys(),
+            index=0,
+        )
+
+        st.session_state.supervisor_key = st.selectbox(
+            "回饋選擇",
+            options=redis_supervisor_handler.get_all_keys(),
             index=0,
         )
 

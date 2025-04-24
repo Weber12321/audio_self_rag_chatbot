@@ -119,12 +119,16 @@ class RAGLLMService:
 
 class EvalLLMService:
 
-    def __init__(self, scenarios_description: str = None):
+    def __init__(
+        self, scenarios_description: str = None, supervisor_instructions: str = None
+    ):
         """Initialize the LLM service with Open AI"""
         if not scenarios_description:
             scenarios_description = ""
         self.llm = create_google_model()
-        self.system_prompt = create_scenarios_supervisor_prompt(scenarios_description)
+        self.system_prompt = create_scenarios_supervisor_prompt(
+            scenarios_description, supervisor_instructions
+        )
         self.eval_chain = self._create_eval_chain()
 
     def _create_eval_chain(self):
