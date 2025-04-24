@@ -269,7 +269,7 @@ def start_chat_session():
 
 # --- App Logic ---
 
-st.title("限時對話機器人")
+st.title("智能陪練機器人")
 
 # --- UI Placeholders ---
 # ADD a placeholder specifically for the configuration section

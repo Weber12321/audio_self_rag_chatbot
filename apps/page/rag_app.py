@@ -30,7 +30,7 @@ def get_redis_vector_search_connection():
 
 
 def main():
-    st.title("📚 文件管理系統")
+    st.title("📚 知識庫管理系統")
     st.write("上傳 PDF 文件並使用查詢系統進行查詢。")
 
     # redis handler
