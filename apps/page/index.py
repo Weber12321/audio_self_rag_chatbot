@@ -169,6 +169,22 @@ def main():
     # Step 3
     create_step_card(
         3,
+        "Create Supervisor",
+        """
+        Then, create supervisor that evaluate the context and purpose of conversations.
+        
+        **What happens in this step:**
+        - Define a supervisor with rules
+        - Save the supervisor for use in chat sessions
+        """,
+        "🎭",
+        "Go to Supervisor Creator",
+        button_url=base_url + "supervisor_app",
+    )
+
+    # Step 4
+    create_step_card(
+        4,
         "Start a Chat Session",
         """
         Finally, start a chat session where you can interact with the AI. 
@@ -191,7 +207,7 @@ def main():
     st.subheader("Important Notes")
     st.info(
         """
-    - **Order matters**: You must complete steps 1 and 2 before attempting step 3
+    - **Order matters**: You must complete steps 1,2 and 3 before attempting step 4
     - **Vector stores are persistent**: Once created, they remain available for future sessions
     - **Sessions are timed**: The chat interface includes a timer to limit conversation length
     - **Feedback is provided**: After a chat session ends, you'll receive feedback on the conversation
