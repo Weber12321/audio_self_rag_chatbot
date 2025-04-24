@@ -103,10 +103,12 @@ def render_workflow_diagram():
         
         upload [label="1. Upload PDF\\nrag_app.py", fillcolor="#e1f5fe"];
         scenario [label="2. Create Scenarios\\nscenario_app.py", fillcolor="#e8f5e9"];
-        chat [label="3. Start Chat Session\\nchatbot_app.py", fillcolor="#fff8e1"];
+        supervisor [label="3. Create Supervisor\\nsupervisor_app.py", fillcolor="#e8f5e9"];
+        chat [label="4. Start Chat Session\\nchatbot_app.py", fillcolor="#fff8e1"];
         
         upload -> scenario [label="Vector Store"];
-        scenario -> chat [label="Scenario Data"];
+        scenario -> supervisor [label="Scenario Data"];
+        supervisor -> chat [label="Supervisor Data"];
     }
     """
     )
