@@ -336,7 +336,6 @@ if st.session_state.timer_running:
                 pass
 
             if st.session_state.timer_running and st.session_state.langchain_chat:
-                # if prompt := st.chat_input("Ask a question...", key="chat_input_main"):
                 if audio_prompt := st.audio_input("Audio Input"):
                     if audio_prompt.getvalue() != st.session_state.last_audio:
                         # prompt = audio_worker(audio_prompt.getvalue())
@@ -350,7 +349,6 @@ if st.session_state.timer_running:
                                 st.session_state.messages
                             )
                             try:
-                                # Use Langchain for chat response
                                 logger.debug("Invoking LangChain workflow")
 
                                 initial_state = {
@@ -485,3 +483,6 @@ if st.session_state.time_up:
                     st.markdown(message["content"])
 
     st.info("Click Reset to start a new session.")
+    if st.button("重置任務按鈕", type="primary", key="config_reset_button"):
+        logger.info("User clicked Reset Session button")
+        reset_app()
