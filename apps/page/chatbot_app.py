@@ -1,5 +1,6 @@
 import os
 import time
+from src.tools.audio_to_text import AudioToText
 from src.utils.redis_handler import RedisHandler
 import redis
 from typing import Dict, List
@@ -10,9 +11,30 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from src.agents.rag_agent import SelfRAGWorkflow
 from src.agents.supervisor_agent import SupervisorAgent
 from src.utils.log_handler import setup_logger
+from google.genai import Client, types
+from google.genai.types import GenerateContentConfig
+
 
 # Initialize logger
 logger = setup_logger(__name__)
+
+# audio_worker = AudioToText()
+autio_client = Client(api_key=os.getenv("GOOGLE_API_KEY", ""))
+
+
+def audio_to_text(audio_file_object):
+    response = autio_client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=[
+            "請將語音轉換為文字。",
+            types.Part.from_bytes(
+                data=audio_file_object,
+                mime_type="audio/wav",
+            ),
+        ],
+        config=GenerateContentConfig(temperature=0.1),
+    )
+    return response.text
 
 
 # redis
@@ -101,6 +123,8 @@ def initialize_session_state():
         st.session_state.chat_session_id = None
         st.session_state.scenarios_key = None
         st.session_state.vector_search_key = None
+        st.session_state.last_audio = None
+        st.session_state.last_text = None
 
 
 initialize_session_state()
@@ -128,6 +152,8 @@ def reset_app():
     st.session_state.chat_session_id = None
     st.session_state.scenarios_key = None
     st.session_state.vector_search_key = None
+    st.session_state.last_audio = None
+    st.session_state.last_text = None
     # Clear potential widget states explicitly if needed (optional)
     # if 'duration_input' in st.session_state: del st.session_state['duration_input']
     st.rerun()
@@ -310,48 +336,55 @@ if st.session_state.timer_running:
                 pass
 
             if st.session_state.timer_running and st.session_state.langchain_chat:
-                if prompt := st.chat_input("Ask a question...", key="chat_input_main"):
-                    st.session_state.messages.append(
-                        {"role": "user", "content": prompt}
-                    )
-                    lc_messages = convert_to_langchain_messages(
-                        st.session_state.messages
-                    )
-                    try:
-                        # Use Langchain for chat response
-                        logger.debug("Invoking LangChain workflow")
+                # if prompt := st.chat_input("Ask a question...", key="chat_input_main"):
+                if audio_prompt := st.audio_input("Audio Input"):
+                    if audio_prompt.getvalue() != st.session_state.last_audio:
+                        # prompt = audio_worker(audio_prompt.getvalue())
+                        prompt = audio_to_text(audio_prompt.getvalue())
+                        if prompt != st.session_state.last_text:
+                            st.session_state.last_text = prompt
+                            st.session_state.messages.append(
+                                {"role": "user", "content": prompt}
+                            )
+                            lc_messages = convert_to_langchain_messages(
+                                st.session_state.messages
+                            )
+                            try:
+                                # Use Langchain for chat response
+                                logger.debug("Invoking LangChain workflow")
 
-                        initial_state = {
-                            "messages": lc_messages,
-                            "max_generation": 2,
-                            "docs": [],
-                            "is_retrieval_related": False,
-                            "validated_docs": [],
-                            "response": "",
-                            "response_validated": None,
-                            "max_generation": 2,
-                            "query_rewritten": False,
-                            "rewritten_query": "",
-                        }
+                                initial_state = {
+                                    "messages": lc_messages,
+                                    "max_generation": 2,
+                                    "docs": [],
+                                    "is_retrieval_related": False,
+                                    "validated_docs": [],
+                                    "response": "",
+                                    "response_validated": None,
+                                    "max_generation": 2,
+                                    "query_rewritten": False,
+                                    "rewritten_query": "",
+                                }
 
-                        response = st.session_state.langchain_chat.workflow.invoke(
-                            initial_state
-                        )
-                        assistant_response = response["messages"][-1].content
-                    except Exception as e:
-                        logger.error(
-                            f"Error generating response: {str(e)}", exc_info=True
-                        )
-                        st.error(
-                            f"An error occurred while processing your request: {e}"
-                        )
-                        assistant_response = (
-                            f"Sorry, I couldn't generate a response due to {str(e)}"
-                        )
-                    st.session_state.messages.append(
-                        {"role": "assistant", "content": assistant_response}
-                    )
-                    st.rerun()
+                                response = (
+                                    st.session_state.langchain_chat.workflow.invoke(
+                                        initial_state
+                                    )
+                                )
+                                assistant_response = response["messages"][-1].content
+                            except Exception as e:
+                                logger.error(
+                                    f"Error generating response: {str(e)}",
+                                    exc_info=True,
+                                )
+                                st.error(
+                                    f"An error occurred while processing your request: {e}"
+                                )
+                                assistant_response = f"Sorry, I couldn't generate a response due to {str(e)}"
+                            st.session_state.messages.append(
+                                {"role": "assistant", "content": assistant_response}
+                            )
+                            st.rerun()
 
     # Sidebar content - always show certain elements
     with st.sidebar:

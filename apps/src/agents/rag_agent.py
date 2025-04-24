@@ -68,10 +68,10 @@ class SelfRAGWorkflow:
 
         return workflow.compile()
 
-    async def retrieve_or_respond(self, state):
+    def retrieve_or_respond(self, state):
         """An agent which decide to retrieve relevant documents based on the query or reply the LLM answer directly"""
         # Extract the query from the latest human message
-        response = await self.llm_service.rag_agent.ainvoke(
+        response = self.llm_service.rag_agent.invoke(
             {"query": state["messages"][-1].content},
             config={"configurable": {"session_id": self.session_id}},
         )
@@ -97,7 +97,7 @@ class SelfRAGWorkflow:
         validated_docs = []
 
         for doc in docs:
-            response = self.llm_service.document_validation_chain.ainvoke(
+            response = self.llm_service.document_validation_chain.invoke(
                 {"query": query, "document": doc}
             )
 
@@ -133,7 +133,7 @@ class SelfRAGWorkflow:
         )
 
         # Update the state with the generated response
-        state["response"] = self.llm_service.rag_response_chain.ainvoke(
+        state["response"] = self.llm_service.rag_response_chain.invoke(
             {
                 "query": query,
                 "documents": docs_content,
@@ -146,7 +146,7 @@ class SelfRAGWorkflow:
         """Validate the generated response twice with LLM response and query"""
         query = state["messages"][-1].content
         response = state["response"]
-        response = self.llm_service.response_validation_chain.ainvoke(
+        response = self.llm_service.response_validation_chain.invoke(
             {
                 "query": query,
                 "response": response,
@@ -173,7 +173,7 @@ class SelfRAGWorkflow:
     def query_rewrite(self, state: SelfRAGState):
         """Rewrite the query if it failed in the previous stage"""
 
-        new_query = self.llm_service.query_rewrite_chain.ainvoke(
+        new_query = self.llm_service.query_rewrite_chain.invoke(
             {"query": state["messages"][-1].content}
         )
         new_query = (
