@@ -7,7 +7,7 @@ services:
     depends_on:
       - redis
     ports:
-      - "8501:8501"
+      - ${PORT_OFFSET}01:8501
     env_file:
       - .env
     restart: unless-stopped
@@ -24,7 +24,7 @@ services:
     image: redis:latest
     container_name: timer_redis
     ports:
-      - "6379:6379"
+      - ${PORT_OFFSET}79:6379
     restart: unless-stopped
     volumes:
       - redis_data:/data
