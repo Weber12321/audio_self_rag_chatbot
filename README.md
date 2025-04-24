@@ -1,1 +1,1 @@
-# Audio Retrieval-Augmented Generatiion ChatBot
+# Audio Retrieval-Augmented Generation ChatBot
