@@ -365,7 +365,6 @@ if st.session_state.timer_running:
             if st.session_state.timer_running and st.session_state.langchain_chat:
                 if audio_prompt := st.audio_input("Audio Input"):
                     if audio_prompt.getvalue() != st.session_state.last_audio:
-                        # prompt = audio_worker(audio_prompt.getvalue())
                         prompt = audio_to_text(audio_prompt.getvalue())
                         if prompt != st.session_state.last_text:
                             st.session_state.last_text = prompt
@@ -409,6 +408,7 @@ if st.session_state.timer_running:
                             st.session_state.messages.append(
                                 {"role": "assistant", "content": assistant_response}
                             )
+                            st.session_state.last_audio = audio_prompt.getvalue()
                             st.rerun()
 
     # Sidebar content - always show certain elements
@@ -516,6 +516,6 @@ if st.session_state.time_up:
                     st.markdown(message["content"])
 
     st.info("Click Reset to start a new session.")
-    if st.button("重置任務按鈕", type="primary"):
+    if st.button("重置按鈕", type="primary"):
         logger.info("User clicked Reset Session button")
         reset_app()
