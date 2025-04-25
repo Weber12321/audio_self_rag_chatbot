@@ -1,5 +1,6 @@
 import os
 import time
+import uuid
 from src.utils.redis_handler import RedisHandler
 import redis
 from typing import Dict, List
@@ -186,9 +187,7 @@ def start_chat_session():
         st.session_state.warning_sent = False
         st.session_state.duration_seconds = st.session_state.timer_duration_minutes * 60
         st.session_state.start_time = time.time()
-        st.session_state.chat_session_id = (
-            "test_session_id"  # Placeholder for session ID
-        )
+        st.session_state.chat_session_id = str(uuid.uuid4())
         try:
             logger.info(
                 f"Initializing SelfRAGWorkflow for session: {st.session_state.chat_session_id}"
